@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sip — Time card studies</title>
+<link rel="stylesheet" href="time-card-tuning-vendor.css">
 <!-- Open this file directly, or serve the repository root. No CDN or build
      step is needed: time-card-vendor.js contains the installed libraries.
      These are independent, in-memory prototypes; nothing changes Sip prefs.
@@ -54,15 +55,34 @@
 /* 07: centered layout and independent glyph entrance motion. */
 [data-study="paper-right"]{grid-column:3;grid-row:3}
 [data-study="paper-right"] .paper-clock{justify-content:center}
+[data-study="paper-right"] .paper-row{gap:4px}
 [data-study="paper-right"] .paper-input{text-align:center}
-.clock-motion{position:absolute;inset:0;pointer-events:none;user-select:none;overflow:clip;overflow-clip-margin:5px}
+.clock-motion{position:absolute;inset:0;pointer-events:none;user-select:none;overflow:visible}
+[data-study="paper-right"] .paper-surface{overflow:clip}
 .clock-motion-group{position:absolute;left:50%;top:0;height:64px}
 .clock-motion-slot{position:absolute;left:0;top:0;height:64px;white-space:pre}
 .clock-motion-glyph{display:block;line-height:64px}
 .clock-motion-colon{color:#aaabb2;position:relative;top:-6.4px}
 .clock-motion-measure{position:absolute;visibility:hidden;white-space:pre;pointer-events:none}
 [data-study="paper-right"] .interval{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
-[data-study="paper-right"] .interval strong{display:inline-block;letter-spacing:-.2px}
+[data-study="paper-right"] .interval{width:100%}
+[data-study="paper-right"] .interval>span{flex:none}
+[data-study="paper-right"] .interval strong{display:block;position:relative;flex:1;min-width:0;min-height:20px;letter-spacing:-.2px;clip-path:inset(-8px 0)}
+.footer-torph,.footer-slide{position:absolute;left:0;top:0;line-height:20px;white-space:nowrap}
+.footer-slide{visibility:hidden;display:inline-flex;white-space:pre}
+.footer-digit-slot{position:relative;display:inline-block}
+.footer-digit{display:block}
+.footer-digit.outgoing{position:absolute;left:0;top:0}
+[data-renderer=slide] .footer-slide{visibility:visible}
+[data-renderer=slide] .footer-torph{visibility:hidden}
+[data-study="paper-right"] .paper-steppers button:active:not(:disabled){transform:scale(var(--button-press-scale,.96))}
+.footer-label-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.time-card-dials .dialkit-panel-inner:not([data-collapsed=true]){width:var(--tuning-width,320px)!important;height:var(--tuning-height,auto)!important;max-width:calc(100vw - 32px);max-height:calc(100dvh - var(--tuning-top,100px) - 16px)!important;padding-bottom:22px}
+.time-card-dials .dialkit-panel:has([data-collapsed=true]) .tuning-resize{display:none}
+.tuning-resize{position:absolute;bottom:5px;right:5px;width:20px;height:20px;padding:0;border:0;background:transparent;color:var(--dial-text-tertiary);cursor:nwse-resize;touch-action:none}
+.tuning-resize:after{content:'';position:absolute;right:4px;bottom:4px;width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;border-radius:0 0 2px 0}
+.time-card-dials button:active{transform:none}
+.tuning-motion-error{font:12px/1.4 system-ui;color:var(--error);margin:8px 0 0}.tuning-motion-error:empty{display:none}
 [data-theme=dark] .clock-motion-colon{color:#8d8f98}
 @media(max-width:1005px){[data-study="paper-right"]{grid-column:2;grid-row:4}}
 @media(max-width:679px){[data-study="paper-right"]{grid-column:auto;grid-row:auto}}
@@ -160,7 +180,7 @@
       <h2 class="study-title" id="title-paper-right"><span class="index">07</span>A little more fluid<span class="tag">New in v2</span></h2>
       <!-- User-supplied Paper design: https://app.paper.design/file/01KQDZF4S85YX0S7257WXPK0N1/1-0/DBS-0 -->
       <div class="card paper-card">
-        <div class="card-head"><span class="cap">Timing</span><span class="save-state" aria-hidden="true">✓ Saved</span></div>
+        <div class="card-head"><span class="cap">Timing</span></div>
         <div class="paper-row">
           <div class="surface paper-surface"><div class="paper-clock">
             <span class="clock-motion" aria-hidden="true"></span>
@@ -182,6 +202,10 @@
 </div>
 <script src="time-card-vendor.js"></script>
 <script src="time-card-motion.js"></script>
+<script src="time-card-tuning-vendor.js"></script>
+<script src="time-card-footer.js"></script>
+<script src="time-card-easing.js"></script>
+<script src="time-card-tuning.js"></script>
 <script>
 (() => {
   'use strict';
@@ -228,9 +252,9 @@
       root.querySelectorAll('[data-step]').forEach(button => button.disabled = +button.dataset.step < 0 ? state.value <= 1 : state.value >= 1439);
       root.querySelectorAll('[data-preset]').forEach(button => button.setAttribute('aria-pressed',String(+button.dataset.preset === state.value)));
     };
-    state.save = value => {
+    state.save = (value, motion = {}) => {
       const changed = value !== state.value;
-      state.value = value;state.error('');state.render();state.refresh();
+      state.value = value;state.error('');state.render(motion);state.refresh();
       if (changed) state.feedback();
     };
     state.finish = () => {
@@ -246,7 +270,7 @@
         const draft = state.read();
         if (button.dataset.preset) state.save(+button.dataset.preset);
         else if (draft === null) state.error('Finish this time before adjusting it. Esc restores.');
-        else state.save(Math.min(1439,Math.max(1,draft + +button.dataset.step)));
+        else state.save(Math.min(1439,Math.max(1,draft + +button.dataset.step)),{step:true});
       });
     });
     surface.addEventListener('keydown', event => {
@@ -454,6 +478,7 @@
   // 07 — Torph matches digit identity; custom motion separates the vertical
   // entrance from the centered layout. A real input retains HHMM editing.
   const paper = stateFor('paper-right');
+  paper.feedback = () => {};
   const paperInput = paper.root.querySelector('input');
   const paperMotion = window.createTimeCardMotion(paper.root.querySelector('.clock-motion'));
   let paperFocused = false;
@@ -464,21 +489,27 @@
   const interval = paper.root.querySelector('.interval');
   const intervalValue = document.createElement('strong');
   interval.replaceChildren(Object.assign(document.createElement('span'),{textContent:'Every:'}),intervalValue);
-  const intervalMorph = new TextMorph({element:intervalValue,numbers:false,scale:false,duration:200,ease:'cubic-bezier(.22,1,.36,1)',respectReducedMotion:true});
+  const intervalMorph = window.createTimeCardFooter(intervalValue);
+  window.createTimeCardTuning(values=>{
+    paperMotion.configure({...values.input,stepDurationMs:values.buttons.digitTiming.duration,stepEasing:values.buttons.digitTiming.easing});
+    intervalMorph.configure(values.footer);
+    paper.root.style.setProperty('--button-press-scale',values.buttons.pressScale);
+    paper.root.querySelector('.paper-row').style.gap=`${values.layout.buttonGapPx}px`;
+  });
   paper.refresh = () => {
     // Keep this node alive so Torph can reuse unchanged digits and letters.
     intervalMorph.update(longWords(paper.value));
     paper.root.querySelectorAll('[data-step]').forEach(button=>button.disabled=+button.dataset.step<0?paper.value<=1:paper.value>=1439);
   };
-  function paperPaint(text, cursorIndex) {
+  function paperPaint(text, cursorIndex, step = false, deleting = false) {
     const padding = !paperFocused && !paperInvalidDraft ? 4-paperRawSaved().length : 0;
-    paperMotion.update(text, {padding, cursorIndex});
+    paperMotion.update(text, {padding, cursorIndex, step, deleting});
   }
   paper.read = () => parseDigits(paperInput.value.replace(/:/g,''));
-  paper.render = () => {
+  paper.render = ({step = false} = {}) => {
     paperInvalidDraft=false;
     paperInput.value=paperFocused?paperFormat(paperRawSaved()):clock(paper.value);
-    paperPaint(paperInput.value);
+    paperPaint(paperInput.value, undefined, step);
   };
   paperInput.addEventListener('focus',()=>{
     paperFocused=true;
@@ -493,7 +524,7 @@
       }
     });
   });
-  paperInput.addEventListener('input',()=>{
+  paperInput.addEventListener('input',event=>{
     paper.error('');paperInvalidDraft=false;
     const before=paperInput.value;
     const start=paperInput.selectionStart??before.length;
@@ -507,7 +538,7 @@
       return count+(raw.length>2&&count>split?1:0);
     };
     if(before!==next){paperInput.value=next;paperInput.setSelectionRange(mapCaret(start),mapCaret(end));}
-    paperPaint(next, next.slice(0,paperInput.selectionStart??next.length).replace(/\D/g,'').length);
+    paperPaint(next, next.slice(0,paperInput.selectionStart??next.length).replace(/\D/g,'').length, false, event.inputType?.startsWith('delete'));
     // Bounds use the draft while typing; the saved interval below stays put.
     const draft=paper.read();
     paper.root.querySelectorAll('[data-step]').forEach(button=>button.disabled=draft!==null&&(+button.dataset.step<0?draft<=1:draft>=1439));

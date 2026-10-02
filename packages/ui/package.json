@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@sip/types": "*",
+    "dialkit": "^2.0.2",
     "numora": "^4.0.0",
     "sonner": "^2.0.7",
     "torph": "^0.1.3"

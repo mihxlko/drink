@@ -3,7 +3,8 @@
 window.createTimeCardMotion = function createTimeCardMotion(element) {
   const { segmentNumber } = window.TimeCardLibraries;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const duration = 190;
+  let settings = {enterDistancePx:40,travelTimeMs:190,exitDistancePx:40,linkExitToEntry:true,deleteDownward:true};
+  const layoutDuration = 190;
   const easing = 'cubic-bezier(.22, 1, .36, 1)';
   const group = document.createElement('span');
   group.className = 'clock-motion-group';
@@ -17,18 +18,20 @@ window.createTimeCardMotion = function createTimeCardMotion(element) {
     const transform = getComputedStyle(node).transform;
     return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
   };
-  function move(node, from, to, animate) {
+  function move(node, from, to, animate, timing) {
     node.getAnimations().forEach(animation => animation.cancel());
     node.style.transform = `translateX(${to}px)`;
     if (animate && Math.abs(from-to) > .01) {
-      node.animate([{transform:`translateX(${from}px)`},{transform:`translateX(${to}px)`}], {duration,easing});
+      node.animate([{transform:`translateX(${from}px)`},{transform:`translateX(${to}px)`}], timing);
     }
   }
   function width(text) {
     measure.textContent = text;
     return measure.getBoundingClientRect().width;
   }
-  function update(text, {padding = 0, cursorIndex} = {}) {
+  function update(text, {padding = 0, cursorIndex, step = false, deleting = false} = {}) {
+    const verticalTiming={duration:step?(settings.stepDurationMs??settings.travelTimeMs):settings.travelTimeMs,easing:step?(settings.stepEasing??easing):easing};
+    const layoutTiming=step?verticalTiming:{duration:layoutDuration,easing};
     const raw = text.replace(/:/g,'').slice(padding);
     if (raw !== previousRaw || !initialized) segments = segmentNumber(raw, segments, cursorIndex);
     previousRaw = raw;
@@ -63,10 +66,13 @@ window.createTimeCardMotion = function createTimeCardMotion(element) {
       element.append(slot.node);
       slot.node.dataset.exiting = '';
       slot.node.style.transform = `translateX(${x}px)`;
+      const rollOut = (step || deleting) && /\d/.test(slot.glyph.textContent);
+      const downward = deleting && settings.deleteDownward;
+      const exitDistance = downward || settings.linkExitToEntry ? settings.enterDistancePx : settings.exitDistancePx;
       const exit = slot.node.animate([
         {transform:`translateX(${x}px)`,opacity:1},
-        {transform:`translateX(${x-(slot.padding?16:0)}px)`,opacity:0}
-      ],{duration:150,easing,fill:'forwards'});
+        {transform:rollOut ? `translate(${x}px, ${downward?exitDistance:-exitDistance}px)` : `translateX(${x-(slot.padding?16:0)}px)`,opacity:0}
+      ],{duration:rollOut?verticalTiming.duration:150,easing:verticalTiming.easing,fill:'forwards'});
       exit.onfinish = () => slot.node.remove();
     }
 
@@ -89,15 +95,16 @@ window.createTimeCardMotion = function createTimeCardMotion(element) {
       slot.glyph.textContent = segment.string;
       // Existing glyphs move only horizontally. New glyphs begin at their
       // final slot; their only horizontal movement comes from the whole group.
-      move(slot.node, fresh ? segment.x : oldPositions.get(segment.id), segment.x, animate);
+      move(slot.node, fresh ? segment.x : oldPositions.get(segment.id), segment.x, animate, layoutTiming);
       if (fresh && animate) {
-        const from = slot.padding ? 'translateX(12px)' : segment.string === ':' ? 'none' : 'translateY(24px)';
-        slot.glyph.animate([{transform:from,opacity:0},{transform:'none',opacity:1}],{duration,easing});
+        const rise = segment.string !== ':' && (step || !slot.padding);
+        const from = rise ? `translateY(${settings.enterDistancePx}px)` : slot.padding ? 'translateX(12px)' : 'none';
+        slot.glyph.animate([{transform:from,opacity:0},{transform:'none',opacity:1}],{duration:rise?verticalTiming.duration:layoutTiming.duration,easing:verticalTiming.easing});
       }
       nextSlots.set(segment.id,slot);
     }
     group.style.width = `${totalWidth}px`;
-    move(group, initialized ? oldGroupX : -totalWidth/2, -totalWidth/2, animate);
+    move(group, initialized ? oldGroupX : -totalWidth/2, -totalWidth/2, animate, layoutTiming);
     slots = nextSlots;
     initialized = true;
   }
@@ -106,5 +113,5 @@ window.createTimeCardMotion = function createTimeCardMotion(element) {
     element.getAnimations({subtree:true}).forEach(animation => animation.cancel());
     element.querySelectorAll('[data-exiting]').forEach(node => node.remove());
   });
-  return {update};
+  return {update,configure(values){settings={...settings,...values};}};
 };
