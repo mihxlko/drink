@@ -3,7 +3,7 @@
 window.createTimeCardMotion = function createTimeCardMotion(element) {
   const { segmentNumber } = window.TimeCardLibraries;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  let settings = {enterDistancePx:40,travelTimeMs:190,exitDistancePx:40,linkExitToEntry:true,deleteDownward:true};
+  let settings = {enterDistancePx:40,travelTimeMs:190,exitDistancePx:40,linkExitToEntry:true,deleteDownward:true,stepExitDownward:true};
   const layoutDuration = 190;
   const easing = 'cubic-bezier(.22, 1, .36, 1)';
   const group = document.createElement('span');
@@ -27,7 +27,9 @@ window.createTimeCardMotion = function createTimeCardMotion(element) {
   }
   function width(text) {
     measure.textContent = text;
-    return measure.getBoundingClientRect().width;
+    // Layout uses local CSS pixels. Screen-space bounds include preview scale
+    // and would apply that scale a second time when positioning the digits.
+    return parseFloat(getComputedStyle(measure).width);
   }
   function update(text, {padding = 0, cursorIndex, step = false, deleting = false} = {}) {
     const verticalTiming={duration:step?(settings.stepDurationMs??settings.travelTimeMs):settings.travelTimeMs,easing:step?(settings.stepEasing??easing):easing};
@@ -67,7 +69,7 @@ window.createTimeCardMotion = function createTimeCardMotion(element) {
       slot.node.dataset.exiting = '';
       slot.node.style.transform = `translateX(${x}px)`;
       const rollOut = (step || deleting) && /\d/.test(slot.glyph.textContent);
-      const downward = deleting && settings.deleteDownward;
+      const downward = step ? settings.stepExitDownward : deleting && settings.deleteDownward;
       const exitDistance = downward || settings.linkExitToEntry ? settings.enterDistancePx : settings.exitDistancePx;
       const exit = slot.node.animate([
         {transform:`translateX(${x}px)`,opacity:1},
@@ -98,8 +100,10 @@ window.createTimeCardMotion = function createTimeCardMotion(element) {
       move(slot.node, fresh ? segment.x : oldPositions.get(segment.id), segment.x, animate, layoutTiming);
       if (fresh && animate) {
         const rise = segment.string !== ':' && (step || !slot.padding);
-        const from = rise ? `translateY(${settings.enterDistancePx}px)` : slot.padding ? 'translateX(12px)' : 'none';
-        slot.glyph.animate([{transform:from,opacity:0},{transform:'none',opacity:1}],{duration:rise?verticalTiming.duration:layoutTiming.duration,easing:verticalTiming.easing});
+        // Match the resting CSS transform: dropping back to `none` switches
+        // rasterization at the end of a slide, which can shift text in WebKit.
+        const from = rise ? `translate3d(0,${settings.enterDistancePx}px,0)` : slot.padding ? 'translate3d(12px,0,0)' : 'translate3d(0,0,0)';
+        slot.glyph.animate([{transform:from,opacity:0},{transform:'translate3d(0,0,0)',opacity:1}],{duration:rise?verticalTiming.duration:layoutTiming.duration,easing:verticalTiming.easing,fill:'backwards'});
       }
       nextSlots.set(segment.id,slot);
     }

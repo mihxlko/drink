@@ -1,5 +1,5 @@
 /* Footer label: Torph preserves text across wording changes. When one or two
-   digits change, only those digits use the input's upward exit / upward entry. */
+   digits change, only those digits slide, with a configurable exit direction. */
 window.createTimeCardFooter = function createTimeCardFooter(element) {
   const wordingTiming = {duration:200,easing:'cubic-bezier(.22,1,.36,1)'};
   let timing = {...wordingTiming};
@@ -14,7 +14,7 @@ window.createTimeCardFooter = function createTimeCardFooter(element) {
   accessible.className = 'footer-label-sr';
   element.append(torph,slide,accessible);
   const morph = new window.TimeCardLibraries.TextMorph({element:torph,numbers:false,scale:false,duration:wordingTiming.duration,ease:wordingTiming.easing,respectReducedMotion:true});
-  let previous = '', singleEnabled = true, doubleEnabled = true, distance = 16;
+  let previous = '', singleEnabled = true, doubleEnabled = true, distance = 16, exitDownward = true;
   let currentDigits = new Map();
 
   function changedDigits(before, after) {
@@ -57,7 +57,7 @@ window.createTimeCardFooter = function createTimeCardFooter(element) {
         currentDigits.set(index,incoming);
         const exit=outgoing.animate([
           visible.get(index),
-          {transform:`translateY(${-distance}px)`,opacity:0}
+          {transform:`translateY(${exitDownward?distance:-distance}px)`,opacity:0}
         ],{...timing,fill:'forwards'});
         exit.onfinish=()=>outgoing.remove();
         incoming.animate([
@@ -87,6 +87,7 @@ window.createTimeCardFooter = function createTimeCardFooter(element) {
       singleEnabled=values.singleDigitSlide??true;
       doubleEnabled=values.twoDigitSlide??true;
       distance=values.travelDistancePx;
+      exitDownward=values.exitDownward??true;
       timing=values.slideTiming??timing;
       const count=Number(element.dataset.slidingDigits);
       if(count===1&&!singleEnabled||count===2&&!doubleEnabled){clearSlide();element.dataset.renderer='torph';delete element.dataset.slidingDigits;}

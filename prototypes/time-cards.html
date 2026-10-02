@@ -61,7 +61,9 @@
 [data-study="paper-right"] .paper-surface{overflow:clip}
 .clock-motion-group{position:absolute;left:50%;top:0;height:64px}
 .clock-motion-slot{position:absolute;left:0;top:0;height:64px;white-space:pre}
-.clock-motion-glyph{display:block;line-height:64px}
+/* Keep the same text rasterization path during a slide and at rest. The
+   matching translate3d endpoints live in time-card-motion.js. */
+.clock-motion-glyph{display:block;line-height:64px;transform:translate3d(0,0,0)}
 .clock-motion-colon{color:#aaabb2;position:relative;top:-6.4px}
 .clock-motion-measure{position:absolute;visibility:hidden;white-space:pre;pointer-events:none}
 [data-study="paper-right"] .interval{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
@@ -86,6 +88,18 @@
 [data-theme=dark] .clock-motion-colon{color:#8d8f98}
 @media(max-width:1005px){[data-study="paper-right"]{grid-column:2;grid-row:4}}
 @media(max-width:679px){[data-study="paper-right"]{grid-column:auto;grid-row:auto}}
+/* Recording mode uses the existing card, so its input and motion stay live. */
+body[data-preview-mode="true"]{overflow:hidden;background:#fff}
+body[data-preview-mode="true"]:before{content:'';position:fixed;inset:0;background:#fff;z-index:100}
+body[data-preview-mode="true"] .wrap{padding:0;max-width:none}
+body[data-preview-mode="true"] .wrap>:not(.grid),
+body[data-preview-mode="true"] .grid>:not([data-study="paper-right"]),
+body[data-preview-mode="true"] .time-card-dials,
+body[data-preview-mode="true"] [data-study="paper-right"]>.study-title,
+body[data-preview-mode="true"] [data-study="paper-right"]>.caption{display:none!important}
+body[data-preview-mode="true"] [data-study="paper-right"]{position:fixed;left:50%;top:50%;z-index:101;transform:translate(-50%,-50%) scale(var(--preview-scale,1));transform-origin:center;outline:none}
+body[data-preview-mode="true"] [data-study="paper-right"] .card{position:relative}
+body[data-preview-mode="true"] [data-study="paper-right"] .card:after{content:'';position:absolute;inset:0;border:solid #f3f3f2;border-width:1px 1px 3px;border-radius:inherit;pointer-events:none}
 </style>
 </head>
 <body>
@@ -483,6 +497,7 @@
   const paperMotion = window.createTimeCardMotion(paper.root.querySelector('.clock-motion'));
   let paperFocused = false;
   let paperInvalidDraft = false;
+  let paperFirstClick = false;
   const paperFormat = raw => raw.length > 2 ? `${raw.slice(0,-2)}:${raw.slice(-2)}` : raw;
   const paperRawSaved = () => String(Math.floor(paper.value/60)*100+paper.value%60);
   const longWords = total => [Math.floor(total/60) ? `${Math.floor(total/60)} ${total>=120?'Hours':'Hour'}` : '',total%60 ? `${total%60} ${total%60===1?'Minute':'Minutes'}` : ''].filter(Boolean).join(' ');
@@ -490,11 +505,15 @@
   const intervalValue = document.createElement('strong');
   interval.replaceChildren(Object.assign(document.createElement('span'),{textContent:'Every:'}),intervalValue);
   const intervalMorph = window.createTimeCardFooter(intervalValue);
-  window.createTimeCardTuning(values=>{
-    paperMotion.configure({...values.input,stepDurationMs:values.buttons.digitTiming.duration,stepEasing:values.buttons.digitTiming.easing});
+  let previewOpen = false, previewOpenKey = 'o', previewScroll = 0, previewFocus;
+  const paperTuning = window.createTimeCardTuning(values=>{
+    paperMotion.configure({...values.input,stepDurationMs:values.buttons.digitTiming.duration,stepEasing:values.buttons.digitTiming.easing,stepExitDownward:values.buttons.exitDownward});
     intervalMorph.configure(values.footer);
     paper.root.style.setProperty('--button-press-scale',values.buttons.pressScale);
     paper.root.querySelector('.paper-row').style.gap=`${values.layout.buttonGapPx}px`;
+    previewOpenKey = values.previewOpenKey;
+    // Initialize all studies with real font metrics before hiding any of them.
+    queueMicrotask(()=>document.fonts.ready.then(()=>setPreviewMode(values.previewMode)));
   });
   paper.refresh = () => {
     // Keep this node alive so Torph can reuse unchanged digits and letters.
@@ -515,14 +534,15 @@
     paperFocused=true;
     if(!paperInvalidDraft)paperInput.value=paperFormat(paperRawSaved());
     paperPaint(paperInput.value);
-    // A first click begins editing at the end; subsequent clicks and keyboard
-    // selection retain ordinary input behavior. Backspace deletes one digit.
-    requestAnimationFrame(()=>{
-      if(document.activeElement===paperInput){
-        const end=paperInput.value.length;
-        paperInput.setSelectionRange(end,end);
-      }
-    });
+    // Set the caret in this event, never in a later animation frame: a deferred
+    // reset can overwrite a selection or move the caret after typing begins.
+    paperInput.setSelectionRange(paperInput.value.length,paperInput.value.length);
+  });
+  paperInput.addEventListener('pointerdown',()=>{paperFirstClick=document.activeElement!==paperInput;});
+  paperInput.addEventListener('pointercancel',()=>{paperFirstClick=false;});
+  paperInput.addEventListener('click',()=>{
+    if(paperFirstClick)paperInput.setSelectionRange(paperInput.value.length,paperInput.value.length);
+    paperFirstClick=false;
   });
   paperInput.addEventListener('input',event=>{
     paper.error('');paperInvalidDraft=false;
@@ -558,6 +578,54 @@
     else paper.save(value);
   });
   paper.refresh();
+
+  function setPreviewMode(open) {
+    if(open===previewOpen){document.body.dataset.previewMode=String(open);return;}
+    previewOpen=open;
+    if(open){
+      previewScroll=window.scrollY;
+      previewFocus=document.activeElement;
+      // A fresh recording starts at 15 minutes, without a focused input.
+      document.activeElement?.blur();
+      document.body.dataset.previewMode='true';
+      paper.root.style.setProperty('--preview-scale','1');
+      paper.root.tabIndex=-1;
+      paper.root.focus({preventScroll:true});
+      paper.reset();
+    }else{
+      if(paper.root.contains(document.activeElement))document.activeElement.blur();
+      document.body.dataset.previewMode='false';
+      paper.root.removeAttribute('tabindex');
+      if(previewFocus?.isConnected)previewFocus.focus({preventScroll:true});
+      window.scrollTo({top:previewScroll,behavior:'instant'});
+    }
+  }
+  function matchesPreviewShortcut(event, shortcut) {
+    const parts=String(shortcut||'o').split('+').map(part=>part.trim().toLowerCase()).filter(Boolean);
+    const key=parts.pop();
+    if(!key||key==='escape')return false;
+    const modifiers=new Set(parts.map(part=>({cmd:'meta',command:'meta',control:'ctrl',option:'alt'})[part]||part));
+    if([...modifiers].some(part=>!['meta','ctrl','alt','shift'].includes(part)))return false;
+    return (event.key===' '?'space':event.key.toLowerCase())===key
+      && event.metaKey===modifiers.has('meta') && event.ctrlKey===modifiers.has('ctrl')
+      && event.altKey===modifiers.has('alt') && event.shiftKey===modifiers.has('shift');
+  }
+  document.addEventListener('keydown',event=>{
+    if(event.repeat||event.isComposing||event.defaultPrevented)return;
+    // Reserve these two scale shortcuts even while the numeric input is active.
+    if(previewOpen&&event.shiftKey&&!event.metaKey&&!event.ctrlKey&&!event.altKey&&['Digit1','Digit2'].includes(event.code)){
+      event.preventDefault();paper.root.style.setProperty('--preview-scale',event.code==='Digit2'?'2':'1');return;
+    }
+    const target=event.target;
+    if(target instanceof HTMLElement&&(target.isContentEditable||target.closest('input,textarea,select,.time-card-dials')))return;
+    if(previewOpen){
+      if(event.key==='Escape'){
+        event.preventDefault();paperTuning.setValue('previewMode',false);
+      }
+    }else if(matchesPreviewShortcut(event,previewOpenKey)){
+      event.preventDefault();paperTuning.setValue('previewMode',true);
+    }
+  });
 
   })();
 
