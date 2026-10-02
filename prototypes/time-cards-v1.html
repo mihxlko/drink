@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sip — Time card studies</title>
+<!-- Open this file directly, or serve the repository root. No CDN or build
+     step is needed: time-card-vendor.js contains the installed libraries.
+     These are independent, in-memory prototypes; nothing changes Sip prefs.
+     Geometry: Settings.tsx's 290px column, 16px card padding, 258px content.
+     "Finish editing" means Enter or leaving the field, never clearing it.
+     Range: 1–1439 whole minutes. Incomplete drafts never replace saved values. -->
+<style>
+@font-face{font-family:Sip;src:url('../apps/web/public/fonts/SF-Pro-Rounded-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:Sip;src:url('../apps/web/public/fonts/SF-Pro-Rounded-Medium.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:Sip;src:url('../apps/web/public/fonts/SF-Pro-Rounded-Semibold.woff2') format('woff2');font-weight:600;font-display:swap}
+:root{color-scheme:light;--base:#fff;--card:#f8f8f9;--field:#fff;--selected:#f1f1f2;--line:#e3e3e5;--field-line:#f1f1f2;--ink:#171719;--text:#323338;--muted:#71737f;--quiet:#8d8f98;--blue:#387ecc;--focus:#51a0ea;--tint:#edf5fd;--error:#b13c35;--green:#247a58;--ease:cubic-bezier(.22,1,.36,1)}
+[data-theme=dark]{color-scheme:dark;--base:#171719;--card:#1f2023;--field:#28282c;--selected:#323338;--line:#393a40;--field-line:#323338;--ink:#f8f8f9;--text:#f1f1f2;--muted:#aaabb2;--quiet:#8d8f98;--blue:#79b9f4;--focus:#79b9f4;--tint:#263342;--error:#ff9e97;--green:#7bcba5}
+*{box-sizing:border-box}body{margin:0;background:var(--base);color:var(--text);font:15px/1.45 Sip,ui-rounded,system-ui,sans-serif;-webkit-font-smoothing:antialiased}button,input{font:inherit}button{cursor:pointer;color:inherit}button:disabled{cursor:default;opacity:.35}button:focus-visible,a:focus-visible{outline:2px solid var(--focus);outline-offset:3px}button{transition:background 140ms ease,transform 140ms var(--ease)}button:active:not(:disabled){transform:scale(.96)}a{color:var(--blue);text-underline-offset:3px}::selection{background:#51a0ea40}
+.wrap{max-width:1006px;margin:auto;padding:32px 32px 56px}.top{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:46px}.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px}.brand svg{width:25px;height:30px}.top-right{display:flex;align-items:center;gap:12px}.lab{color:var(--muted);font-size:13px}.themes{display:flex;background:var(--card);border:1px solid var(--field-line);padding:3px;border-radius:24px;gap:2px}.themes button{border:0;background:none;border-radius:20px;padding:6px 12px;font-size:13px}.themes button[aria-pressed=true]{background:var(--selected);color:var(--ink)}
+.eyebrow{font-size:11px;letter-spacing:.13em;color:var(--blue);font-weight:600;text-transform:uppercase;margin:0 0 10px}h1{font-size:42px;line-height:1.1;letter-spacing:-1.3px;font-weight:600;margin:0 0 14px}.intro{color:var(--muted);font-size:16px;max-width:620px;margin:0}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding:27px 0 17px;margin-bottom:28px}.dimensions{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:9px}.dimensions svg{width:17px;height:17px}.reset{border:0;background:var(--card);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(3,290px);gap:34px 36px}.study{width:290px;min-width:0}.study-title{display:flex;align-items:center;gap:9px;margin:0 0 12px;font-size:15px;font-weight:600}.index{font-size:11px;color:var(--muted);font-weight:500}.study-title .tag{margin-left:auto;font-size:10px;font-weight:500;background:var(--tint);color:var(--blue);padding:3px 6px;border-radius:5px}.card{width:290px;padding:16px;border-radius:16px;background:var(--card);display:flex;flex-direction:column;gap:16px;min-height:241px}.card-head{display:flex;align-items:center;justify-content:space-between;min-height:17px}.cap{font-size:13px;line-height:1.25;letter-spacing:.02em;text-transform:uppercase;font-weight:600;color:var(--quiet)}.save-state{font-size:11px;color:var(--green);opacity:0;display:flex;align-items:center;gap:4px;transition:opacity 160ms ease}.save-state svg{width:12px;height:12px}.card[data-saved] .save-state{opacity:1}
+.surface{position:relative;min-height:110px;border:1px solid var(--field-line);border-radius:18px;background:var(--field);display:flex;align-items:center;justify-content:center;transition:border-color 150ms ease,box-shadow 150ms ease}.surface:focus-within{border-color:var(--focus);box-shadow:0 0 0 1px var(--focus)}.card[data-invalid] .surface{border-color:var(--error);box-shadow:0 0 0 1px var(--error)}.clock{font-size:76px;line-height:1;font-weight:600;letter-spacing:-2.6px;font-kerning:none;color:var(--ink);white-space:pre}.display{pointer-events:none;user-select:none;display:inline-block;max-width:100%}.full-input{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;text-align:center;padding:0 8px;outline:0;caret-color:var(--ink)}.native .full-input{color:transparent}.native:focus-within .full-input{color:var(--ink)}.native:focus-within .display{visibility:hidden}.full-input::placeholder{color:var(--quiet);opacity:.45}
+.footer{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:20px;font-size:13px}.interval{color:var(--muted);font-weight:500}.interval strong{font-weight:600;color:var(--text)}.caption{font-size:12px;color:var(--muted);margin:11px 0 0;line-height:1.55}.caption kbd{font:inherit;font-weight:600;color:var(--text)}.status{font-size:12px;color:var(--error);margin:0;line-height:1.4}.status:empty{display:none}.steps{display:flex;gap:6px}.steps button{width:49px;height:32px;border:1px solid var(--field-line);border-radius:9px;background:var(--field);font-weight:600;font-size:13px}.steps button span{font-size:11px;font-weight:400;color:var(--muted)}.step-row{display:flex;gap:6px}.step-row button{flex:1;height:33px;border:0;border-radius:9px;background:var(--field);font-size:13px;font-weight:500}.step-row .sign{font-size:19px;line-height:0;margin-right:4px;vertical-align:-1px}
+.numeric .number-area{position:relative;width:100%;padding:0 16px;text-align:right;display:flex;justify-content:flex-end;align-items:center}.numeric .display{display:block;width:max-content;min-width:1px}.numeric .input-host{position:absolute;inset:0 16px}.numeric input{width:100%;height:100%;padding:0;margin:0;border:0;outline:0;background:transparent;text-align:right;font-family:inherit;font-size:76px;line-height:1;font-weight:600;letter-spacing:-2.6px;font-kerning:none;color:transparent;caret-color:var(--ink)}.numeric input::placeholder{color:transparent}.numeric .unit{position:absolute;right:16px;bottom:9px;color:var(--muted);font-size:11px}.numeric .number-area{padding-bottom:10px}.numeric .input-host{bottom:10px}.numeric:not(:focus-within) input{cursor:text}.instruction{font-size:11px;color:var(--muted)}.conversion{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:20px}.conversion .to-clock{color:var(--blue);font-weight:600;font-size:13px}.entry-label{font-size:11px;letter-spacing:.015em;color:var(--muted)}
+.minutes .clock,.minutes input{font-size:76px}.minutes:focus-within .clock,.minutes:focus-within input{font-size:72px}.minutes .number-area{padding-bottom:16px}.minutes .input-host{bottom:16px}
+.unit-surface{gap:3px}.unit-group{width:101px;position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0 10px}.unit-group input{width:100%;font-size:74px;line-height:1;font-weight:600;letter-spacing:-2px;text-align:center;color:var(--ink);border:0;outline:0;background:transparent;padding:0;caret-color:var(--focus)}.unit-group input::placeholder{color:var(--quiet)}.unit-group label{font-size:10px;color:var(--muted)}.unit-group:after{content:'';position:absolute;bottom:3px;left:26px;right:26px;height:2px;border-radius:2px;background:var(--focus);opacity:0;transform:scaleX(.6);transition:transform 160ms var(--ease),opacity 160ms ease}.unit-group:focus-within:after{opacity:1;transform:scaleX(1)}.unit-colon{font-size:66px;color:var(--quiet);font-weight:600;transform:translateY(-13px)}.presets{display:flex;gap:5px}.presets button{border:1px solid var(--field-line);background:var(--field);border-radius:9px;flex:1;padding:7px;font-size:12px;color:var(--muted)}.presets button[aria-pressed=true]{color:var(--blue);background:var(--tint);border-color:transparent}
+.slot-surface{border:0;background:none;gap:4px;min-height:110px}.slot-surface:focus-within{box-shadow:none}.slot{width:49px;height:83px;border:1px solid var(--field-line);background:var(--field);border-radius:11px;font-size:55px;font-weight:600;line-height:1;text-align:center;padding:0;color:var(--ink);outline:none;caret-color:var(--focus)}.slot:focus{border-color:var(--focus);box-shadow:0 0 0 1px var(--focus)}.slot::placeholder{color:var(--quiet);opacity:.45}.slot-colon{font-size:49px;font-weight:600;color:var(--quiet);width:14px;text-align:center;transform:translateY(-4px)}.slot-labels{display:flex;justify-content:space-around;margin-top:-18px;font-size:10px;color:var(--muted)}
+.notes{width:290px;padding-top:31px}.notes-inner{border-top:1px solid var(--line);padding-top:20px}.notes h2{font-size:15px;margin:0 0 14px;font-weight:600}.try{display:flex;gap:11px;margin:0 0 13px;color:var(--muted);font-size:13px;line-height:1.5}.try span{font-size:11px;font-weight:600;color:var(--blue);padding-top:2px}.notes small{display:block;font-size:11px;color:var(--quiet);margin-top:20px}.bottom{display:flex;justify-content:space-between;gap:20px;border-top:1px solid var(--line);margin-top:38px;padding-top:17px;font-size:11px;color:var(--muted)}.bottom a{color:var(--muted)}
+@media(hover:hover){button:hover:not(:disabled){background:var(--selected)}.themes button:hover{background:var(--selected)}}
+@media(max-width:1005px){.wrap{max-width:680px}.grid{grid-template-columns:repeat(2,290px)}}
+@media(max-width:679px){.wrap{max-width:354px;padding:22px 16px 36px}.grid{grid-template-columns:290px;justify-content:center;gap:28px}.top{margin-bottom:32px}.lab{display:none}.themes button{padding:6px 9px}h1{font-size:35px}.intro{font-size:14px}.dimensions{font-size:10px;gap:5px}.toolbar{gap:8px}.reset{font-size:11px;padding:8px}.bottom{flex-direction:column;gap:8px}.notes{padding-top:0}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Prototype revisions are separate documents so earlier interactions stay frozen. */
+.version-select{font:500 13px Sip,system-ui,sans-serif;color:var(--text);background:var(--card);border:1px solid var(--field-line);border-radius:10px;padding:8px 28px 8px 11px;cursor:pointer;max-width:120px}.version-select:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+@media(max-width:679px){.top{flex-wrap:wrap;gap:12px}.top-right{gap:8px;margin-left:auto}.version-select{font-size:12px;padding:7px 20px 7px 9px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><svg viewBox="0 0 28 34" fill="none" aria-hidden="true"><defs><linearGradient id="drop" x2="0" y2="1"><stop stop-color="#00d9e7"/><stop offset="1" stop-color="#3d3bff"/></linearGradient></defs><path d="M14 1C11 7 2 17 2 23a12 12 0 0 0 24 0C26 17 17 7 14 1Z" fill="url(#drop)"/><path d="M8 22c0 4 2 6 5 7" stroke="white" stroke-opacity=".65" stroke-width="2.5" stroke-linecap="round"/></svg>Sip <span class="lab">/ interaction studies</span></div>
+    <div class="top-right"><select class="version-select" aria-label="Prototype version" onchange="location.href=this.value"><option value="time-cards-v1.html" selected>Version 1</option><option value="time-cards.html">Version 2</option></select><div class="themes" aria-label="Preview theme"><button aria-pressed="true" data-theme-choice="light">Light</button><button aria-pressed="false" data-theme-choice="dark">Dark</button></div></div>
+  </header>
+  <p class="eyebrow">Timing, with a little more feeling</p>
+  <h1>Make time feel right.</h1>
+  <p class="intro">Five ways to set the same reminder. Click into a time, clear it, change your mind. The interesting part is how it feels in between.</p>
+  <div class="toolbar"><span class="dimensions"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor"/><path d="M6 5v4m4-4v3m4-3v4" stroke="currentColor"/></svg>290px panel · actual size</span><button class="reset" id="reset">Reset all to 15 min ↺</button></div>
+  <main class="grid">
+    <section class="study" aria-labelledby="title-clock" data-study="clock">
+      <h2 class="study-title" id="title-clock"><span class="index">01</span>The familiar clock</h2>
+      <div class="card">
+        <div class="card-head"><span class="cap">Timing</span><span class="save-state" aria-hidden="true">✓ Saved</span></div>
+        <div class="surface native"><span class="clock display" aria-hidden="true"></span><input class="clock full-input" id="clock-input" aria-label="Familiar clock, hours and minutes" aria-describedby="clock-help clock-error" inputmode="decimal" autocomplete="off" spellcheck="false" value="00:15" placeholder="hh:mm" maxlength="5"></div>
+        <div class="footer"><span class="interval"></span><div class="steps"><button data-step="-5" aria-label="Familiar clock: subtract 5 minutes">−5<span>m</span></button><button data-step="5" aria-label="Familiar clock: add 5 minutes">+5<span>m</span></button></div></div>
+        <p class="status" id="clock-error" role="status"></p>
+      </div>
+      <p class="caption" id="clock-help">One text field, normal selection. Delete freely; the clock tidies up on <kbd>Enter</kbd> or when you leave.</p>
+    </section>
+    <section class="study" aria-labelledby="title-digits" data-study="digits">
+      <h2 class="study-title" id="title-digits"><span class="index">02</span>Type, then time<span class="tag">Torph + Numora</span></h2>
+      <div class="card">
+        <div class="card-head"><span class="cap">Timing</span><span class="save-state" aria-hidden="true">✓ Saved</span></div>
+        <div class="surface numeric"><div class="number-area"><span class="clock display" aria-hidden="true"></span><div class="input-host"></div></div><span class="unit" aria-hidden="true">hours : minutes</span></div>
+        <div class="conversion"><span class="entry-label">Every</span><span class="to-clock"></span></div>
+        <p class="status" id="digits-error" role="status"></p>
+      </div>
+      <p class="caption" id="digits-help">The colon steps aside while you type. <kbd>130 → 01:30.</kbd> Digits grow from the right; the colon returns on exit.</p>
+    </section>
+    <section class="study" aria-labelledby="title-minutes" data-study="minutes">
+      <h2 class="study-title" id="title-minutes"><span class="index">03</span>Minutes first<span class="tag">Torph + Numora</span></h2>
+      <div class="card">
+        <div class="card-head"><span class="cap">Timing</span><span class="save-state" aria-hidden="true">✓ Saved</span></div>
+        <div class="surface numeric minutes"><div class="number-area"><span class="clock display" aria-hidden="true"></span><div class="input-host"></div></div><span class="unit" aria-hidden="true">hours : minutes</span></div>
+        <div class="step-row"><button data-step="-5" aria-label="Minutes first: subtract 5 minutes"><span class="sign">−</span>5 minutes</button><button data-step="5" aria-label="Minutes first: add 5 minutes"><span class="sign">+</span>5 minutes</button></div>
+        <p class="status" id="minutes-error" role="status"></p>
+      </div>
+      <p class="caption" id="minutes-help">Think in minutes, read it as a clock. <kbd>90 → 01:30.</kbd> Select all on entry, or click again to edit one digit.</p>
+    </section>
+    <section class="study" aria-labelledby="title-units" data-study="units">
+      <h2 class="study-title" id="title-units"><span class="index">04</span>A steady center</h2>
+      <div class="card">
+        <div class="card-head"><span class="cap">Timing</span><span class="save-state" aria-hidden="true">✓ Saved</span></div>
+        <div class="surface unit-surface"><div class="unit-group"><input id="units-hours" aria-label="Steady center: hours" aria-describedby="units-help units-error" value="00" maxlength="2" inputmode="numeric" autocomplete="off" placeholder="–"><label for="units-hours">hours</label></div><span class="unit-colon" aria-hidden="true">:</span><div class="unit-group"><input id="units-minutes" aria-label="Steady center: minutes" aria-describedby="units-help units-error" value="15" maxlength="2" inputmode="numeric" autocomplete="off" placeholder="–"><label for="units-minutes">minutes</label></div></div>
+        <div class="presets" aria-label="Steady center presets"><button data-preset="15" aria-pressed="true">15 min</button><button data-preset="30" aria-pressed="false">30 min</button><button data-preset="60" aria-pressed="false">1 hour</button></div>
+        <p class="status" id="units-error" role="status"></p>
+      </div>
+      <p class="caption" id="units-help">A fixed colon, one shared surface. Click hours or minutes to replace that pair; use <kbd>Tab</kbd> to move across.</p>
+    </section>
+    <section class="study" aria-labelledby="title-slots" data-study="slots">
+      <h2 class="study-title" id="title-slots"><span class="index">05</span>One digit at a time<span class="tag">Control study</span></h2>
+      <div class="card">
+        <div class="card-head"><span class="cap">Timing</span><span class="save-state" aria-hidden="true">✓ Saved</span></div>
+        <div class="surface slot-surface" role="group" aria-label="Individual digit clock">
+          <input class="slot" aria-label="Hours, tens digit" aria-describedby="slots-help slots-error" inputmode="numeric" maxlength="1" value="0" placeholder="–" autocomplete="off">
+          <input class="slot" aria-label="Hours, ones digit" aria-describedby="slots-help slots-error" inputmode="numeric" maxlength="1" value="0" placeholder="–" autocomplete="off">
+          <span class="slot-colon" aria-hidden="true">:</span>
+          <input class="slot" aria-label="Minutes, tens digit" aria-describedby="slots-help slots-error" inputmode="numeric" maxlength="1" value="1" placeholder="–" autocomplete="off">
+          <input class="slot" aria-label="Minutes, ones digit" aria-describedby="slots-help slots-error" inputmode="numeric" maxlength="1" value="5" placeholder="–" autocomplete="off">
+        </div>
+        <div class="slot-labels" aria-hidden="true"><span>hours</span><span>minutes</span></div>
+        <div class="footer"><span class="interval"></span><span class="instruction">Type to advance →</span></div>
+        <p class="status" id="slots-error" role="status"></p>
+      </div>
+      <p class="caption" id="slots-help">The deliberately separated comparison. Digits keep their place; clearing a slot leaves it empty.</p>
+    </section>
+    <aside class="notes"><div class="notes-inner"><h2>Take each one for a spin.</h2><p class="try"><span>01</span>Change 15 minutes to 1 hour 30.</p><p class="try"><span>02</span>Delete a digit in the middle.<br>Replace it without starting over.</p><p class="try"><span>03</span>Clear everything. Type again.<br>Try 00:01 and 23:59.</p><small>Enter to finish · Esc to undo this edit<br>Changes stay in this prototype only.</small></div></aside>
+  </main>
+  <footer class="bottom"><span>Five studies. One small space. No swiping or dragging.</span><span>Motion: <a href="https://torph.lochie.me/">Torph</a> · Numeric entry: <a href="https://numeric-input.com/">Numora</a></span></footer>
+</div>
+<script src="time-card-vendor.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { TextMorph, NumoraInput, FormatOn, ThousandStyle } = window.TimeCardLibraries;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const studies = [];
+  const clock = total => `${String(Math.floor(total / 60)).padStart(2,'0')}:${String(total % 60).padStart(2,'0')}`;
+  const words = total => total < 60 ? `${total} min` : `${Math.floor(total/60)} hr${total%60 ? ` ${total%60} min` : ''}`;
+  const inRange = value => Number.isInteger(value) && value >= 1 && value <= 1439;
+  function parseClock(raw) {
+    const match = raw.trim().match(/^(\d{1,2}):(\d{1,2})$/);
+    if (!match || +match[1] > 23 || +match[2] > 59) return null;
+    const total = +match[1] * 60 + +match[2];
+    return inRange(total) ? total : null;
+  }
+  function parseDigits(raw) {
+    if (!/^\d{1,4}$/.test(raw)) return null;
+    const padded = raw.padStart(4,'0');
+    return parseClock(`${padded.slice(0,2)}:${padded.slice(2)}`);
+  }
+  function morph(element, text) {
+    const animator = new TextMorph({element, duration:220, ease:'cubic-bezier(0.22, 1, 0.36, 1)', scale:false, respectReducedMotion:true});
+    animator.update(text);
+    return animator;
+  }
+  function stateFor(name) {
+    const root = document.querySelector(`[data-study="${name}"]`);
+    const card = root.querySelector('.card');
+    const surface = root.querySelector('.surface');
+    let savedTimer;
+    const state = {root,card,surface,value:15,render:()=>{},read:()=>null,cancelled:false,invalidMessage:'Use a time from 00:01 to 23:59. Esc restores.'};
+    state.error = message => {
+      root.querySelector('.status').textContent = message;
+      card.toggleAttribute('data-invalid', !!message);
+      root.querySelectorAll('input').forEach(input => input.setAttribute('aria-invalid', String(!!message)));
+    };
+    state.feedback = () => {
+      clearTimeout(savedTimer);card.setAttribute('data-saved','');
+      savedTimer = setTimeout(() => card.removeAttribute('data-saved'),1300);
+    };
+    state.refresh = () => {
+      const interval = root.querySelector('.interval');
+      if (interval) { interval.replaceChildren('Every ', Object.assign(document.createElement('strong'), {textContent:words(state.value)})); }
+      root.querySelectorAll('[data-step]').forEach(button => button.disabled = +button.dataset.step < 0 ? state.value <= 1 : state.value >= 1439);
+      root.querySelectorAll('[data-preset]').forEach(button => button.setAttribute('aria-pressed',String(+button.dataset.preset === state.value)));
+    };
+    state.save = value => {
+      const changed = value !== state.value;
+      state.value = value;state.error('');state.render();state.refresh();
+      if (changed) state.feedback();
+    };
+    state.finish = () => {
+      if (state.cancelled) {state.cancelled=false;return;}
+      const value = state.read();
+      if (value === null) {state.error(state.invalidMessage);return;}
+      state.save(value);
+    };
+    root.querySelectorAll('[data-step], [data-preset]').forEach(button => {
+      // Keep an in-progress input draft available until the action can read it.
+      button.addEventListener('pointerdown', event => event.preventDefault());
+      button.addEventListener('click', () => {
+        const draft = state.read();
+        if (button.dataset.preset) state.save(+button.dataset.preset);
+        else if (draft === null) state.error('Finish this time before adjusting it. Esc restores.');
+        else state.save(Math.min(1439,Math.max(1,draft + +button.dataset.step)));
+      });
+    });
+    surface.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();state.cancelled=true;state.error('');state.render();
+        document.activeElement.blur();state.cancelled=false;
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if(state.read() === null) state.error(state.invalidMessage);
+        else document.activeElement.blur();
+      }
+    });
+    state.reset = () => {state.value=15;state.error('');state.render();state.refresh();clearTimeout(savedTimer);card.removeAttribute('data-saved');};
+    studies.push(state);return state;
+  }
+
+  // 01 — Native text editing. The display morphs only after committing or
+  // stepping; no invisible mirror competes with text selection during typing.
+  const plain = stateFor('clock');
+  const plainInput = plain.root.querySelector('input');
+  const plainMorph = morph(plain.root.querySelector('.display'),clock(15));
+  plain.render = () => {plainInput.value=clock(plain.value);plainMorph.update(plainInput.value);};
+  plain.read = () => parseClock(plainInput.value);
+  plainInput.addEventListener('input', () => plain.error(''));
+  plainInput.addEventListener('blur', plain.finish);
+  plain.refresh();
+
+  // 02 / 03 — Actual Numora inputs with Torph display layers. HHMM entry and
+  // total-minute entry intentionally use different, explicitly labelled rules.
+  // Inputs preserve a string draft (including empty), independent of saved time.
+  function numericStudy(name, totalMinutes) {
+    const state = stateFor(name);
+    state.invalidMessage = totalMinutes?'Enter 1–1439 minutes. Esc restores.':'Use HHMM, from 0001 to 2359. Esc restores.';
+    const display = state.root.querySelector('.display');
+    const unit = state.root.querySelector('.unit');
+    const summary = state.root.querySelector('.to-clock');
+    let focused = false;
+    let invalidDraft = false;
+    const animator = morph(display,clock(15));
+    const rawSaved = () => totalMinutes ? String(state.value) : String(Math.floor(state.value/60)*100+state.value%60);
+    const numora = new NumoraInput(state.root.querySelector('.input-host'), {
+      value:'15', formatOn:FormatOn.Change, thousandStyle:ThousandStyle.None,
+      decimalMaxLength:0,enableNegative:false,enableLeadingZeros:true,
+      maxLength:4,rawValueMode:true,inputMode:'numeric',autoComplete:'off',
+      isAllowed:raw => /^\d{0,4}$/.test(raw)
+    });
+    const input = numora.getElement();
+    input.id = `${name}-input`;
+    input.setAttribute('aria-label', totalMinutes ? 'Minutes first: total minutes' : 'Type then time: HHMM digits');
+    input.setAttribute('aria-describedby',`${name}-help ${name}-error`);
+    state.read = () => {const raw=numora.value;return totalMinutes ? (/^\d+$/.test(raw) && inRange(+raw) ? +raw : null) : parseDigits(raw);};
+    function preview() {
+      const raw = numora.value;
+      animator.update(raw || ' ', input.selectionStart ?? raw.length);
+      const parsed = state.read();
+      if (summary) summary.textContent = parsed === null ? '—' : clock(parsed);
+    }
+    function editSync() {state.error('');invalidDraft=false;if(focused) preview();}
+    state.render = () => {
+      invalidDraft=false;numora.setValue(rawSaved(),{undoable:false});
+      animator.update(focused ? numora.value : clock(state.value));
+      unit.textContent = focused ? (totalMinutes ? 'minutes' : 'HHMM · no colon needed') : 'hours : minutes';
+      if (summary) summary.textContent = focused ? clock(state.value) : words(state.value);
+    };
+    input.addEventListener('focus', () => {
+      focused=true;
+      if(!invalidDraft) numora.setValue(rawSaved(),{undoable:false});
+      unit.textContent=totalMinutes?'minutes':'HHMM · no colon needed';
+      preview();
+      // Let the initiating click finish before selecting the initial value.
+      requestAnimationFrame(() => {if(document.activeElement===input) input.select();});
+    });
+    input.addEventListener('beforeinput', () => queueMicrotask(editSync));
+    input.addEventListener('input',editSync);
+    input.addEventListener('blur', () => {
+      focused=false;
+      if(state.cancelled) {state.render();state.cancelled=false;return;}
+      const value=state.read();
+      if(value===null) {
+        invalidDraft=true;animator.update(numora.value || ' ');
+        state.error(state.invalidMessage);
+      } else state.save(value);
+    });
+    // Native selection/caret must align with the mirror after its brief motion.
+    // Match every typography metric; Torph's caret matching handles insertion.
+    state.refresh();if(summary) summary.textContent=words(15);
+  }
+  numericStudy('digits',false);numericStudy('minutes',true);
+
+  // 04 — Two unit fields share one visual surface; the colon never moves.
+  const units = stateFor('units');
+  const unitInputs = [...units.root.querySelectorAll('input')];
+  units.read = () => parseClock(`${unitInputs[0].value}:${unitInputs[1].value}`);
+  units.render = () => clock(units.value).split(':').forEach((part,i)=>unitInputs[i].value=part);
+  unitInputs.forEach((input,i)=>{
+    input.addEventListener('focus',()=>requestAnimationFrame(()=>{if(document.activeElement===input)input.select();}));
+    input.addEventListener('input',()=>units.error(''));
+    input.addEventListener('keydown',event=>{if(event.key===':'&&i===0){event.preventDefault();unitInputs[1].focus();}});
+  });
+  units.surface.addEventListener('focusout',event=>{if(!units.surface.contains(event.relatedTarget))units.finish();});
+  units.refresh();
+
+  // 05 — A deliberate counterexample, with holes instead of forced zeros.
+  const slots = stateFor('slots');
+  const slotInputs = [...slots.root.querySelectorAll('input')];
+  slots.read = () => slotInputs.every(input=>/^\d$/.test(input.value)) ? parseDigits(slotInputs.map(input=>input.value).join('')) : null;
+  slots.render = () => clock(slots.value).replace(':','').split('').forEach((digit,i)=>slotInputs[i].value=digit);
+  slotInputs.forEach((input,i)=>{
+    input.addEventListener('focus',()=>input.select());
+    input.addEventListener('input',event=>{
+      slots.error('');input.value=input.value.replace(/\D/g,'').slice(-1);
+      if(input.value && !event.inputType?.startsWith('delete')) {
+        if(!reduced.matches) input.animate([{transform:'translateY(3px)',opacity:.55},{transform:'translateY(0)',opacity:1}],{duration:160,easing:'ease-out'});
+        if(i<3)slotInputs[i+1].focus();
+      }
+    });
+    input.addEventListener('keydown',event=>{
+      if(event.key==='Backspace'&&!input.value&&i>0){event.preventDefault();slotInputs[i-1].focus();}
+      if(event.key==='ArrowLeft'&&i>0){event.preventDefault();slotInputs[i-1].focus();}
+      if(event.key==='ArrowRight'&&i<3){event.preventDefault();slotInputs[i+1].focus();}
+    });
+    input.addEventListener('paste',event=>{
+      const raw=event.clipboardData.getData('text').trim();
+      if(!/^(\d{4}|\d{2}:\d{2})$/.test(raw))return;
+      event.preventDefault();raw.replace(':','').split('').forEach((digit,j)=>slotInputs[j].value=digit);
+      slots.error('');slotInputs[3].focus();
+    });
+  });
+  slots.surface.addEventListener('focusout',event=>{if(!slots.surface.contains(event.relatedTarget))slots.finish();});
+  slots.refresh();
+
+  document.querySelectorAll('[data-theme-choice]').forEach(button=>button.addEventListener('click',()=>{
+    document.documentElement.dataset.theme=button.dataset.themeChoice;
+    document.querySelectorAll('[data-theme-choice]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+  }));
+  document.getElementById('reset').addEventListener('click',()=>studies.forEach(state=>state.reset()));
+  // Font metrics determine Torph's glyph positions. Recreate its measured state
+  // after the local font is ready, before the user starts comparing interactions.
+  document.fonts.ready.then(()=>studies.forEach(state=>state.render()));
+})();
+</script>
+</body>
+</html>
