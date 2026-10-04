@@ -1,0 +1,62 @@
+.sip-time-card {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: var(--space-gap-md);
+  padding: var(--space-padding-lg);
+  border-radius: var(--radius-3xl);
+  background: var(--surface-card);
+  user-select: none;
+}
+.sip-time-title { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 17px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+.sip-time-row { display: flex; align-items: stretch; gap: var(--space-gap-xs); }
+.sip-time-field {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  height: 98px;
+  padding: 16px 10px;
+  border: 1px solid var(--border-field);
+  border-radius: var(--radius-chip);
+  background: var(--surface-field);
+  /* The field is the sole clip. Glyphs have the full vertical padding to travel. */
+  overflow: clip;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.sip-time-field:focus-within { border-color: var(--brand-primary-500); box-shadow: 0 0 0 1px var(--brand-primary-500); }
+.sip-time-field[data-invalid] { border-color: var(--text-error); box-shadow: 0 0 0 1px var(--text-error); }
+.sip-time-clock { position: relative; width: 100%; height: 64px; color: var(--text-strong); font-size: 64px; line-height: 1; font-weight: 600; font-kerning: none; letter-spacing: 0; }
+.sip-time-input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; outline: none; background: none; color: transparent; caret-color: transparent; text-align: center; font: inherit; letter-spacing: inherit; font-kerning: none; user-select: text; }
+.sip-time-input::selection { color: transparent; background: transparent; }
+.sip-time-card .clock-motion { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.sip-time-card .clock-motion-group { position: absolute; left: 50%; top: 0; height: 64px; }
+.sip-time-card .clock-motion-slot { position: absolute; left: 0; top: 0; height: 64px; white-space: pre; }
+/* Stable resting layer avoids switching glyph rasterization at animation end. */
+.sip-time-card .clock-motion-glyph { display: block; line-height: 64px; transform: translate3d(0,0,0); }
+.sip-time-card .clock-motion-colon { color: var(--text-muted); position: relative; top: -6.4px; }
+.sip-time-card .clock-motion-measure { position: absolute; visibility: hidden; white-space: pre; pointer-events: none; }
+.sip-time-buttons { display: flex; flex-direction: column; gap: 2px; width: 48px; flex: none; }
+.sip-time-buttons button { display: flex; align-items: center; justify-content: center; flex: 1; width: 48px; padding: 0; border: 1px solid var(--border-field); border-radius: var(--radius-chip); background: var(--surface-field); color: var(--text-tertiary); cursor: pointer; transition: background-color 140ms ease, transform 140ms cubic-bezier(.22,1,.36,1); }
+.sip-time-buttons svg { flex-shrink: 0; }
+.sip-time-buttons button:disabled { cursor: default; opacity: .35; }
+.sip-time-buttons button:focus-visible { outline: 2px solid var(--brand-primary-500); outline-offset: 3px; }
+/* Tuned separately from the app's general .btn-press feedback. */
+.sip-time-buttons button:active:not(:disabled), .sip-time-buttons button[data-pressed]:not(:disabled) { transform: scale(.94); }
+@media (hover: hover) { .sip-time-buttons button:hover:not(:disabled) { background: var(--surface-selected); } }
+.sip-time-footer { display: flex; align-items: center; gap: var(--space-gap-xs); width: 100%; font-size: 16px; line-height: 20px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.sip-time-footer > span:first-child { flex: none; }
+.sip-time-label { display: block; position: relative; flex: 1; min-width: 0; min-height: 20px; color: var(--text-label); font-variant-numeric: tabular-nums; letter-spacing: -.2px; clip-path: inset(-8px 0); }
+.sip-time-card .footer-torph, .sip-time-card .footer-slide { position: absolute; left: 0; top: 0; line-height: 20px; white-space: nowrap; }
+.sip-time-card .footer-slide { visibility: hidden; display: inline-flex; white-space: pre; }
+.sip-time-card .footer-digit-slot { position: relative; display: inline-block; }
+.sip-time-card .footer-digit { display: block; }
+.sip-time-card .footer-digit.outgoing { position: absolute; left: 0; top: 0; }
+.sip-time-card [data-renderer=slide] .footer-slide { visibility: visible; }
+.sip-time-card [data-renderer=slide] .footer-torph { visibility: hidden; }
+.sip-time-card .footer-label-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.sip-time-error { margin: 0; font-size: 12px; line-height: 1.4; color: var(--text-error); }
+@media (prefers-reduced-motion: reduce) {
+  .sip-time-field, .sip-time-buttons button { transition: none; }
+  .sip-time-buttons button:active:not(:disabled), .sip-time-buttons button[data-pressed]:not(:disabled) { transform: none; }
+}
