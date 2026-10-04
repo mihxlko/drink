@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "SIP",
-  "version": "2.0.1",
-  "description": "A smart water drinking reminder — stay hydrated throughout your day.",
+  "name": "Drink",
+  "version": "2.0.2",
+  "description": "“Drink” is a Chrome extension that helps you stay hydrated as you work in the browser.",
   "permissions": ["alarms", "storage", "notifications"],
   "background": {
     "service_worker": "src/background/index.ts",
@@ -10,7 +10,7 @@
   },
   "action": {
     "default_popup": "src/popup/index.html",
-    "default_title": "SIP — Water Reminder"
+    "default_title": "Drink — Water Reminder"
   },
   "content_scripts": [
     {

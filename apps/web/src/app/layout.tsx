@@ -4,8 +4,8 @@ import './globals.css'
 import DevAnnotation from '../components/DevAnnotation'
 
 export const metadata: Metadata = {
-  title: 'SIP — Settings',
-  description: 'A smart water drinking reminder — stay hydrated throughout your day.',
+  title: 'Drink — Settings',
+  description: '“Drink” is a Chrome extension that helps you stay hydrated as you work in the browser.',
   icons: {
     icon: [
       { url: '/icons/sip-icon-16.png', sizes: '16x16', type: 'image/png' },

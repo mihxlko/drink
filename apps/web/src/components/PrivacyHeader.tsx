@@ -53,7 +53,7 @@ export default function PrivacyHeader() {
               backgroundImage: 'linear-gradient(in oklab 180deg, oklab(75% -0.113 -0.049) 0%, oklab(53.6% -0.009 -0.212) 100%)',
             }}
           >
-            Sip Hydra
+            Drink
           </span>
         </Link>
         <div className="pointer-events-auto">

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Upload (and optionally submit) a SIP release to the Chrome Web Store.
+// Upload (and optionally submit) a Drink release to the Chrome Web Store.
 //
 //   npm run cws:publish                    -> upload the newest releases/*.zip as a DRAFT
 //   npm run cws:publish -- 2.0.1           -> upload that specific version
@@ -43,7 +43,7 @@ const USER_CREDS = join(
 )
 const RELEASES = join(root, 'releases')
 
-// The SIP extension on the Chrome Web Store. Public — it is in the store URL
+// The Drink extension on the Chrome Web Store. Public — it is in the store URL
 // and in apps/web/src/links.ts.
 const DEFAULT_ITEM_ID = 'dcipoicfooachjhpchgficlmbkbhogbf'
 
@@ -131,15 +131,15 @@ async function accessToken(c) {
 function pickZip() {
   if (!existsSync(RELEASES)) fail('No releases/ directory — run `npm run release` first.')
   if (versionArg) {
-    const p = join(RELEASES, `sip-v${versionArg}.zip`)
-    if (!existsSync(p)) fail(`${p.replace(root + '/', '')} does not exist.`)
+    const p = [join(RELEASES, `drink-v${versionArg}.zip`), join(RELEASES, `sip-v${versionArg}.zip`)].find(existsSync)
+    if (!p) fail(`No release ZIP for ${versionArg} — run npm run release -- current.`)
     return p
   }
   const zips = readdirSync(RELEASES)
-    .filter(f => /^sip-v\d+\.\d+\.\d+\.zip$/.test(f))
+    .filter(f => /^(?:drink|sip)-v\d+\.\d+\.\d+\.zip$/.test(f))
     .map(f => ({ f, t: statSync(join(RELEASES, f)).mtimeMs }))
     .sort((a, b) => b.t - a.t)
-  if (!zips.length) fail('No sip-vX.Y.Z.zip in releases/ — run `npm run release` first.')
+  if (!zips.length) fail('No drink-vX.Y.Z.zip in releases/ — run `npm run release` first.')
   return join(RELEASES, zips[0].f)
 }
 
@@ -176,7 +176,7 @@ if (statusOnly) {
 
 const zipPath = pickZip()
 const zip = readFileSync(zipPath)
-const localVersion = /sip-v(\d+\.\d+\.\d+)\.zip$/.exec(zipPath)[1]
+const localVersion = /(?:drink|sip)-v(\d+\.\d+\.\d+)\.zip$/.exec(zipPath)[1]
 
 console.log(`
 Chrome Web Store

@@ -60,7 +60,7 @@ export default function InfoModal({ onClose }: { onClose: () => void }) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="About Sip Hydra"
+        aria-label="About Drink"
         /* 650×450 is the design size, but both axes are targets, not mandates:
            - max-w matches the app's 24px gutter (48 = 24×2), so the modal lines
              up with the cards behind it instead of its own 20px inset.
@@ -95,7 +95,7 @@ export default function InfoModal({ onClose }: { onClose: () => void }) {
         {/* ── body: about + links ── */}
         <div className="flex flex-col items-start gap-8 self-stretch">
           <p className="m-0 self-stretch text-[15px] leading-[1.5] font-medium text-text-muted">
-            I created Sip because I am notoriously bad at remembering to hydrate while
+            I created Drink because I am notoriously bad at remembering to hydrate while
             working on my computer. This Chrome extension helped me fix that, no matter
             how locked in I can get. I hope it can help you out as well.
           </p>

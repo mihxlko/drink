@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Release helper for the SIP Chrome extension.
+// Release helper for the Drink Chrome extension.
 //
 //   npm run release                  -> patch bump (1.0.0 -> 1.0.1)
 //   npm run release -- minor         -> minor bump (1.0.0 -> 1.1.0)
@@ -12,9 +12,9 @@
 // NOTE the `--` before the arguments: npm otherwise swallows flags like
 // --dry-run and words it recognizes before they ever reach this script.
 //
-// It bumps the version in manifest.json + both package.json files + the
+// It bumps the version in manifest.json + all app/root package.json files + the
 // lockfile (all kept in sync), builds the extension, and zips dist/ into
-// releases/sip-vX.Y.Z.zip with manifest.json at the zip root — the layout the
+// releases/drink-vX.Y.Z.zip with manifest.json at the zip root — the layout the
 // Chrome Web Store expects.
 
 import { execSync } from 'node:child_process'
@@ -30,6 +30,7 @@ const MANIFEST = join(root, 'apps/extension/manifest.json')
 const VERSION_FILES = [
   MANIFEST,
   join(root, 'apps/extension/package.json'),
+  join(root, 'apps/web/package.json'),
   join(root, 'package.json'),
 ]
 
@@ -104,8 +105,8 @@ try {
 }
 
 const headline = noBump
-  ? `SIP release: packaging current version ${current}`
-  : `SIP release: ${current} -> ${next}`
+  ? `Drink release: packaging current version ${current}`
+  : `Drink release: ${current} -> ${next}`
 console.log(`${headline}${dryRun ? '  (dry run)' : ''}\n`)
 
 if (dryRun) {
@@ -115,7 +116,7 @@ if (dryRun) {
     for (const f of VERSION_FILES) console.log(`  • ${f.replace(root + '/', '')}`)
     console.log('  • package-lock.json (via npm install --package-lock-only)')
   }
-  console.log(`Would build and write releases/sip-v${next}.zip`)
+  console.log(`Would build and write releases/drink-v${next}.zip`)
   process.exit(0)
 }
 
@@ -157,7 +158,7 @@ if (!existsSync(join(DIST, 'manifest.json'))) {
 // --- zip dist/ (contents at the zip root) --------------------------------
 
 mkdirSync(RELEASES, { recursive: true })
-const zipPath = join(RELEASES, `sip-v${next}.zip`)
+const zipPath = join(RELEASES, `drink-v${next}.zip`)
 execSync(`rm -f "${zipPath}"`)
 // -r recurse, -X strip extra file attributes; run from inside dist so the
 // archive has manifest.json at its root, not a dist/ wrapper folder.
@@ -168,7 +169,7 @@ execSync(`cd "${DIST}" && zip -r -X "${zipPath}" . -x '.DS_Store' -x '*/.DS_Stor
 console.log(`\n✓ Wrote ${zipPath.replace(root + '/', '')}\n`)
 console.log('Next steps:')
 console.log('  1. Chrome Web Store → Developer Dashboard → your item → Package → Upload new package')
-console.log(`  2. Upload releases/sip-v${next}.zip`)
+console.log(`  2. Upload releases/drink-v${next}.zip`)
 console.log('  3. Submit for review')
 if (!noBump) {
   console.log('  4. (optional) commit the version bump:')
