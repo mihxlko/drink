@@ -1,4 +1,3 @@
-console.log('SIP content script loaded')
 
 import { createRoot, type Root } from 'react-dom/client'
 import { type SipPrefs } from '@sip/types'

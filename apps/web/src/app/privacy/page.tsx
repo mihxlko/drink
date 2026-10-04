@@ -15,7 +15,7 @@ function applyTheme(theme: Theme) {
 
 export default function PrivacyPage() {
   useEffect(() => {
-    document.title = 'Sip — Privacy Policy'
+    document.title = 'Drink — Privacy Policy'
     webPlatform.getPrefs().then(p => applyTheme(p.theme))
     return webPlatform.onPrefsChanged(p => applyTheme(p.theme))
   }, [])
@@ -31,12 +31,12 @@ export default function PrivacyPage() {
         <h1 className="m-0 text-md font-normal text-text-primary">Privacy Policy</h1>
 
         <div className="flex flex-col gap-gap-md text-sm text-text-tertiary">
-          <p className="m-0">Last updated: July 19, 2026</p>
+          <p className="m-0">Last updated: October 3, 2026</p>
 
           <p className="m-0">
-            “Sip Hydra” is a Chrome extension that helps you stay hydrated as you work in
+            “Drink” is a Chrome extension that helps you stay hydrated as you work in
             the browser. This policy explains what happens to your information when you use
-            it. The short version: Sip does not collect, transmit, sell, or share any
+            it. The short version: Drink does not collect, transmit, sell, or share any
             personal data.
           </p>
 
@@ -48,17 +48,17 @@ export default function PrivacyPage() {
           </p>
 
           <p className="m-0">
-            Sip requests only the permissions it needs to function: alarms to
+            Drink requests only the permissions it needs to function: alarms to
             schedule your hydration reminders, notifications to display them, and
             storage to remember your preferences between sessions. To show
-            a reminder on top of the page you’re currently viewing, Sip runs a small content
+            a reminder on top of the page you’re currently viewing, Drink runs a small content
             script — but it never reads, stores, or transmits the content of the web pages you
             visit. None of these permissions are used to gather information about you or your
             browsing activity.
           </p>
 
           <p className="m-0">
-            Sip contains no analytics, no tracking, no advertising, and no third-party
+            Drink contains no analytics, no tracking, no advertising, and no third-party
             services. Because your data lives only on your device, you can remove it at any
             time by clearing your browser data or uninstalling the extension.
           </p>
