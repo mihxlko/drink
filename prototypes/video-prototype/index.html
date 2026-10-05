@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Sip — motion prototype</title>
+  <style>
+    @font-face { font-family: Sip Rounded; src: url(./assets/SF-Pro-Rounded-Regular.woff2) format("woff2"); font-weight: 400; }
+    @font-face { font-family: Sip Rounded; src: url(./assets/SF-Pro-Rounded-Medium.woff2) format("woff2"); font-weight: 500; }
+    @font-face { font-family: Sip Rounded; src: url(./assets/SF-Pro-Rounded-Semibold.woff2) format("woff2"); font-weight: 600; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; color: #f5f6f8; background: #15181e; font: 14px/1.45 -apple-system, BlinkMacSystemFont, sans-serif; }
+    .app { max-width: 1380px; margin: auto; padding: 28px; display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: start; }
+    .workspace { min-width: 0; }
+    .eyebrow { margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .11em; text-transform: uppercase; color: #9ca6b7; }
+    .stage-viewport { width: 100%; aspect-ratio: 16 / 9; position: relative; overflow: hidden; border-radius: 8px; box-shadow: 0 18px 60px #0006; }
+    .stage { --k: 1; width: 1000px; height: 562.5px; position: absolute; inset: 0 auto auto 0; overflow: hidden; transform-origin: top left; background: #90bfd0 url(./assets/background.jpg) center / cover no-repeat; }
+    /* --k scales the bottles and the toast together so they always fit inside the paddings. */
+    .glass { position: absolute; inset: 24px; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; overflow: hidden; border-radius: 24px; background: rgb(255 255 255 / 80%); }
+    .marquee { height: calc(209px * var(--k)); margin: 0 calc(20px * var(--k)); overflow: hidden; flex: none; }
+    .bottle-track { height: 100%; display: flex; width: max-content; will-change: transform; }
+    /* --b is the Bottle size control; bottles smaller than the marquee sit on its vertical centre. */
+    .bottle-set { height: 100%; display: flex; align-items: center; flex: none; }
+    .bottle-set img { width: calc(80px * var(--k) * var(--b, 1)); height: calc(209px * var(--k) * var(--b, 1)); object-fit: contain; flex: none; display: block; }
+    /* The toast mirrors packages/ui/src/toast-styles.css: every px value below is the
+       production value at its 450px design width, multiplied by --s. */
+    .notification[hidden] { display: none; }
+    .notification { --s: calc(var(--k) * 2.12); flex: none; padding: calc(20px * var(--s)); border: 0; border-bottom: 1px solid #e2e3e6; border-radius: calc(16px * var(--s)); background: #fff; box-shadow: 0 2px 10px 0 rgb(0 0 0 / 5%); color: #171719; font-family: Sip Rounded, ui-rounded, sans-serif; letter-spacing: 0; will-change: transform, opacity; }
+    .notification-row { display: flex; gap: calc(30px * var(--s)); align-items: flex-start; justify-content: space-between; }
+    .notification-left { display: flex; flex: 1; min-width: 0; gap: calc(20px * var(--s)); align-items: flex-start; }
+    .notification-bottle { width: calc(24px * var(--s)); height: calc(60px * var(--s)); flex: none; object-fit: contain; display: block; }
+    .notification-content { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: calc(20px * var(--s)); }
+    .notification-header { display: flex; flex-direction: column; gap: calc(2px * var(--s)); }
+    .notification-title { margin: 0; font-size: calc(17px * var(--s)); line-height: 1.25; font-weight: 600; letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .notification-message { margin: 0; color: #90939d; font-size: calc(13px * var(--s)); line-height: calc(16px * var(--s)); font-weight: 500; letter-spacing: 0; }
+    .notification-edit { width: fit-content; color: #51a0ea; font-size: calc(13px * var(--s)); line-height: calc(16px * var(--s)); font-weight: 500; letter-spacing: 0; }
+    .notification-close { flex: none; height: calc(17px * 1.25 * var(--s)); padding: 0 calc(4px * var(--s)); display: flex; align-items: center; color: #92959e; }
+    .notification-close svg { display: block; width: calc(10px * var(--s)); height: calc(10px * var(--s)); }
+    .transport { display: flex; align-items: center; gap: 12px; margin-top: 15px; color: #b6bfcb; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .transport button, .export-button { border: 1px solid #495260; border-radius: 8px; background: #272d36; color: #fff; padding: 9px 14px; }
+    .transport button:hover, .export-button:hover { background: #343d49; }
+    .transport input { flex: 1; min-width: 0; accent-color: #70b7ff; }
+    .timecode { min-width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
+    .panel { position: sticky; top: 28px; height: calc(100dvh - 56px); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #39414d; border-radius: 12px; background: #20252d; }
+    .panel-head { flex: none; padding: 17px 17px 14px; border-bottom: 1px solid #39414d; }
+    .panel-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 17px 17px; }
+    .panel-foot { flex: none; padding: 0 17px 17px; border-top: 1px solid #39414d; }
+    .panel-foot-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .panel-foot .field { margin: 12px 0; }
+    .panel-head .field { margin: 12px 0 10px; }
+    .panel-actions { display: flex; gap: 14px; }
+    .panel h1 { margin: 0; font-size: 18px; line-height: 1.25; }
+    .panel p { margin: 0 0 20px; color: #a8b3c1; font-size: 12px; }
+    .field { display: block; margin: 16px 0; color: #d2d8e0; font-size: 12px; font-weight: 600; }
+    .field > input[type="text"], .field > select, .field > input[type="file"] { display: block; width: 100%; margin-top: 6px; border: 1px solid #47515e; border-radius: 7px; padding: 8px; background: #171c22; color: #fff; font-size: 13px; font-weight: 400; }
+    .field > input[type="range"] { display: block; width: 100%; margin-top: 10px; accent-color: #70b7ff; }
+    .field > input[type="file"] { font-size: 11px; }
+    .field > input[type="file"]::file-selector-button { margin-right: 7px; border: 0; border-radius: 4px; padding: 4px 7px; background: #3e4855; color: #fff; }
+    .panel h2 { margin: 24px 0 -4px; padding-top: 16px; border-top: 1px solid #39414d; color: #9ca6b7; font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; }
+    .check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .check input { margin: 0; accent-color: #70b7ff; }
+    .field-note { display: block; margin-top: 6px; color: #8e9bab; font-size: 11px; font-weight: 400; }
+    .field-note.warn { color: #e9b86a; }
+    .field-note[hidden] { display: none; }
+    .text-button { border: 0; padding: 0; background: none; color: #70b7ff; font-size: 12px; }
+    .field-value { float: right; color: #9ca6b7; font-weight: 400; }
+    .export-button { width: 100%; background: #317fc8; border-color: #317fc8; font-weight: 600; }
+    .export-button:disabled { cursor: wait; opacity: .6; }
+    .status { margin: 10px 0 0 !important; overflow-wrap: anywhere; }
+    .status:empty { display: none; }
+    .hint { color: #8e9bab; font-size: 12px; }
+    @media (max-width: 900px) { .app { display: block; padding: 16px; } .panel { position: static; height: auto; margin-top: 24px; } .panel-scroll { overflow: visible; } }
+    body.capture { min-width: 0; width: 960px; height: 540px; overflow: hidden; background: transparent; }
+    body.capture .app { display: block; width: 960px; max-width: none; padding: 0; }
+    body.capture .eyebrow, body.capture .transport, body.capture .panel { display: none; }
+    body.capture .stage-viewport { width: 960px; height: 540px; border-radius: 0; box-shadow: none; }
+    body.capture .stage { transform: scale(.96); }
+    /* Container only export: square corners, so the page that hosts the video can round them itself. */
+    body.capture-container .glass { border-radius: 0 !important; }
+    body.capture-transparent .stage { background: none !important; }
+    /* Preview of a backdrop-free export: the checkerboard marks what will be see-through. */
+    .stage.no-backdrop { background: repeating-conic-gradient(#c9ced6 0 25%, #eef0f3 0 50%) 0 0 / 24px 24px !important; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="workspace" aria-label="Motion preview">
+      <p class="eyebrow">Sip / portfolio motion study</p>
+      <div class="stage-viewport" id="stageViewport">
+        <div class="stage" id="stage">
+          <div class="glass">
+            <div class="marquee" aria-hidden="true"><div class="bottle-track" id="bottleTrack"></div></div>
+            <div class="notification" id="notification">
+              <div class="notification-row">
+                <div class="notification-left">
+                  <img class="notification-bottle" id="notificationBottle" src="./assets/notification-bottle.png" alt="">
+                  <div class="notification-content">
+                    <div class="notification-header">
+                      <h2 class="notification-title" id="notificationTitle">Drink Up!</h2>
+                      <p class="notification-message" id="notificationMessage">Sending you a friendly reminder to drink some water.</p>
+                    </div>
+                    <span class="notification-edit">Edit preferences</span>
+                  </div>
+                </div>
+                <span class="notification-close" aria-hidden="true">
+                  <svg viewBox="0 0 8 8" fill="currentColor"><path d="M6.8 7.6L0.4 1.2C0.181 0.981 0.181 0.619 0.4 0.4C0.619 0.181 0.981 0.181 1.2 0.4L7.6 6.8C7.819 7.019 7.819 7.381 7.6 7.6C7.381 7.819 7.019 7.819 6.8 7.6Z"/><path d="M0.4 7.6C0.181 7.381 0.181 7.019 0.4 6.8L6.8 0.4C7.019 0.181 7.381 0.181 7.6 0.4C7.819 0.619 7.819 0.981 7.6 1.2L1.2 7.6C0.981 7.819 0.619 7.819 0.4 7.6Z"/></svg>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="transport">
+        <button id="playButton" type="button">Pause</button>
+        <button id="restartButton" type="button">Restart</button>
+        <input id="scrubber" type="range" min="0" max="12" step="0.01" value="0" aria-label="Timeline">
+        <span class="timecode" id="timecode">0.0 / 12.0 s</span>
+      </div>
+      <p class="hint">The notification appears, holds, and leaves once per loop. The video loops cleanly when the loop length holds a whole number of marquee passes.</p>
+    </section>
+    <aside class="panel">
+      <header class="panel-head">
+        <h1>Motion controls</h1>
+        <label class="field">Variant<select id="variantSelect"></select></label>
+        <div class="panel-actions">
+          <button class="text-button" id="copySettings" type="button">Copy settings</button>
+          <button class="text-button" id="pasteSettings" type="button">Paste settings</button>
+        </div>
+      </header>
+      <div class="panel-scroll">
+        <label class="field">Loop length <span class="field-value" id="cycleValue"></span><input id="cycleInput" type="range" min="8" max="60" step="1"></label>
+        <h2>Marquee</h2>
+        <label class="field">Duration of one pass <span class="field-value" id="marqueeValue"></span><input id="marqueeInput" type="range" min="2" max="60" step="0.5"><span class="field-note" id="marqueeNote"></span></label>
+        <label class="field">Bottle size <span class="field-value" id="bottleSizeValue"></span><input id="bottleSizeInput" type="range" min="30" max="100" step="1"></label>
+        <label class="field">Bottle spacing <span class="field-value" id="spacingValue"></span><input id="spacingInput" type="range" min="0" max="60" step="1"></label>
+        <label class="field">Start fade length <span class="field-value" id="fadeStartValue"></span><input id="fadeStartInput" type="range" min="0" max="50" step="1"></label>
+        <label class="field">Start edge opacity <span class="field-value" id="edgeStartValue"></span><input id="edgeStartInput" type="range" min="0" max="100" step="1"></label>
+        <label class="field">End fade length <span class="field-value" id="fadeEndValue"></span><input id="fadeEndInput" type="range" min="0" max="50" step="1"></label>
+        <label class="field">End edge opacity <span class="field-value" id="edgeEndValue"></span><input id="edgeEndInput" type="range" min="0" max="100" step="1"></label>
+        <h2>Notification</h2>
+        <label class="field check"><input id="showToastInput" type="checkbox">Show notification</label>
+        <label class="field check"><input id="animateToastInput" type="checkbox">Animate in and out</label>
+        <label class="field">Notification title<input id="titleInput" type="text"></label>
+        <label class="field">Notification message<input id="messageInput" type="text"></label>
+        <label class="field">Sip bottle<select id="bottleSelect"></select></label>
+        <label class="field">Custom Sip bottle<input id="bottleFile" type="file" accept="image/*"></label>
+        <h2>Scene</h2>
+        <label class="field">Container opacity <span class="field-value" id="glassValue"></span><input id="glassInput" type="range" min="0" max="100" step="1"></label>
+        <label class="field">Container corner radius <span class="field-value" id="radiusValue"></span><input id="radiusInput" type="range" min="0" max="80" step="1"></label>
+        <label class="field">Video padding <span class="field-value" id="outerValue"></span><input id="outerInput" type="range" min="0" max="80" step="1"></label>
+        <label class="field">Container padding <span class="field-value" id="innerValue"></span><input id="innerInput" type="range" min="0" max="60" step="1"></label>
+        <label class="field">Gap between bottles and toast <span class="field-value" id="gapValue"></span><input id="gapInput" type="range" min="0" max="60" step="1"></label>
+        <label class="field">Photo backdrop<select id="backgroundSelect"></select></label>
+        <label class="field">Custom photo backdrop<input id="backgroundFile" type="file" accept="image/*"></label>
+      </div>
+      <footer class="panel-foot">
+        <div class="panel-foot-row">
+          <label class="field">Export area<select id="areaSelect"><option value="full" selected>Full video</option><option value="container">Container</option></select></label>
+          <label class="field">Quality<select id="qualitySelect"><option value="1920">1080p</option><option value="2560">1440p</option><option value="3840" selected>4K</option></select></label>
+        </div>
+        <label class="field check"><input id="transparentInput" type="checkbox">Remove photo backdrop</label>
+        <span class="field-note" id="transparentNote" style="margin: -4px 0 12px" hidden>Exports a zip with two see-through videos: .webm for Chrome and Firefox, .mov for Safari.</span>
+        <button class="export-button" id="exportButton" type="button">Download MP4</button>
+        <p class="status" id="status" role="status"></p>
+      </footer>
+    </aside>
+  </main>
+  <script>
+    // Edit this list to reorder, remove, or add bottles in the marquee.
+    const BOTTLES = [
+      '1.1-yeti-red', '1.2-yeti-orange', '1.3-yeti-yellow', '1.4-yeti-green', '1.5-yeti-blue', '1.6-yeti-purple',
+      '2.1-camelbak-red', '2.2-camelbak-orange', '2.3-camelbak-yellow', '2.4-camelbak-green', '2.5-camelbak-blue', '2.6-camelbak-purple',
+      '3.1-bibs-red', '3.2-bibs-orange', '3.3-bibs-yellow', '3.4-bibs-green', '3.5-bibs-blue', '3.6-bibs-purple'
+    ];
+    const STAGE_WIDTH = 1000, STAGE_HEIGHT = 562.5, CONTENT_WIDTH = 912, BOTTLE_WIDTH = 80, BOTTLE_HEIGHT = 209, TOAST_SCALE = 2.12;
+    const asset = name => `./assets/${name}.png`;
+    const captureMode = new URLSearchParams(location.search).get('capture');
+    const capture = captureMode !== null;
+    if (capture) document.body.classList.add('capture');
+    if (captureMode === 'container') document.body.classList.add('capture-container');
+    if (new URLSearchParams(location.search).has('transparent')) document.body.classList.add('capture-transparent');
+    const $ = id => document.getElementById(id);
+    const track = $('bottleTrack');
+    const DEFAULTS = {
+      cycleSeconds: 12,
+      title: 'Drink Up!',
+      message: 'Sending you a friendly reminder to drink some water.',
+      notificationBottle: './assets/notification-bottle.png',
+      background: './assets/background.jpg',
+      marqueeSeconds: 12,
+      bottleSpacing: 10,
+      fadeStart: 0,
+      edgeStart: 0,
+      fadeEnd: 17,
+      edgeEnd: 0,
+      animateToast: true,
+      glassOpacity: 80,
+      glassRadius: 24,
+      outerPadding: 24,
+      innerPadding: 20,
+      rowGap: 20,
+      showToast: true,
+      bottleSize: 100
+    };
+    // Saved looks. Each one only lists what differs from DEFAULTS. To add one, use
+    // Copy settings in the panel and paste the result here under a new name.
+    const VARIANTS = {
+      'default': {},
+      'variant-1': {
+        cycleSeconds: 20,
+        marqueeSeconds: 20,
+        bottleSpacing: 24,
+        fadeStart: 8,
+        edgeStart: 5,
+        fadeEnd: 8,
+        edgeEnd: 5,
+        notificationBottle: './assets/1.5-yeti-blue.png',
+        background: './assets/sip-img.png',
+        outerPadding: 32,
+        innerPadding: 24,
+        rowGap: 24
+      }
+    };
+    // variant-1 without the toast, so the bottles grow to fill the container, on plain white.
+    // Bottles at 50% so six fit between the edge fades; one pass and the loop both 40 s.
+    VARIANTS['variant-2'] = { ...VARIANTS['variant-1'], showToast: false, background: '#ffffff', bottleSize: 50, marqueeSeconds: 40, cycleSeconds: 40 };
+    // The settings behind the exported portfolio video.
+    VARIANTS['variant-3'] = { ...VARIANTS['variant-2'], fadeStart: 15, edgeStart: 15, fadeEnd: 15, edgeEnd: 10, bottleSize: 60 };
+    const INITIAL_VARIANT = 'variant-3';
+    // A backdrop is an image path or a plain hex colour.
+    const BACKGROUNDS = { 'Default photo': './assets/background.jpg', 'sip-img': './assets/sip-img.png', 'White (#ffffff)': '#ffffff' };
+    const config = { ...DEFAULTS, ...VARIANTS[INITIAL_VARIANT] };
+    // Slider id → the setting it drives.
+    const RANGES = {
+      cycleInput: 'cycleSeconds', marqueeInput: 'marqueeSeconds', bottleSizeInput: 'bottleSize', spacingInput: 'bottleSpacing',
+      fadeStartInput: 'fadeStart', edgeStartInput: 'edgeStart', fadeEndInput: 'fadeEnd', edgeEndInput: 'edgeEnd',
+      glassInput: 'glassOpacity', radiusInput: 'glassRadius', outerInput: 'outerPadding', innerInput: 'innerPadding', gapInput: 'rowGap'
+    };
+    // Four copies so the strip still covers the marquee when the bottles are small.
+    for (let copy = 0; copy < 4; copy++) {
+      const set = document.createElement('div');
+      set.className = 'bottle-set';
+      for (const name of BOTTLES) {
+        const img = document.createElement('img');
+        img.src = asset(name);
+        img.alt = '';
+        set.append(img);
+      }
+      track.append(set);
+    }
+    const bottleSelect = $('bottleSelect');
+    bottleSelect.add(new Option('Paper notification bottle', './assets/notification-bottle.png'));
+    for (const name of BOTTLES) bottleSelect.add(new Option(name.replace(/^\d\.\d-/, '').replaceAll('-', ' '), asset(name)));
+    const backgroundSelect = $('backgroundSelect');
+    for (const [label, url] of Object.entries(BACKGROUNDS)) backgroundSelect.add(new Option(label, url));
+    const variantSelect = $('variantSelect');
+    for (const name of Object.keys(VARIANTS)) variantSelect.add(new Option(name, name));
+    variantSelect.add(new Option('Custom (edited)', ''));
+    variantSelect.value = INITIAL_VARIANT;
+    // Uploaded images live in the page as data URLs; remember their file names for the selects and Copy settings.
+    const uploads = new Map();
+    function selectImage(select, url) {
+      if (![...select.options].some(option => option.value === url)) select.add(new Option(`Uploaded: ${uploads.get(url) || 'image'}`, url));
+      select.value = url;
+    }
+
+    // Bottles and toast share one scale so the pair fills the space the paddings leave.
+    // 115.25 is the production toast's height at 1x; the extra 1 is its bottom stroke.
+    let scale = 1;
+    function fitContent() {
+      const toast = $('notification');
+      toast.hidden = !config.showToast;
+      // Without the toast the bottles take the container's full height.
+      if (!config.showToast) {
+        scale = (STAGE_HEIGHT - 2 * (config.outerPadding + config.innerPadding)) / BOTTLE_HEIGHT;
+        $('stage').style.setProperty('--k', scale);
+        return;
+      }
+      const room = STAGE_HEIGHT - 2 * (config.outerPadding + config.innerPadding) - config.rowGap;
+      // Capped by width too, so the toast never grows faster than the space its message has to stay on one line.
+      const width = STAGE_WIDTH - 2 * (config.outerPadding + config.innerPadding);
+      scale = Math.min((room - 1) / (BOTTLE_HEIGHT + 115.25 * TOAST_SCALE), width / CONTENT_WIDTH);
+      // A message that wraps makes the toast taller, so search for the largest scale that still fits.
+      const apply = value => { scale = value; $('stage').style.setProperty('--k', value); };
+      const fits = () => BOTTLE_HEIGHT * scale + toast.offsetHeight <= room + .5;
+      apply(scale);
+      if (!fits()) {
+        let low = scale / 4, high = scale;
+        for (let i = 0; i < 14; i++) { apply((low + high) / 2); if (fits()) low = scale; else high = scale; }
+        apply(low);
+      }
+    }
+    function setConfig(next) {
+      Object.assign(config, next);
+      $('notificationTitle').textContent = config.title;
+      $('notificationMessage').textContent = config.message;
+      $('notificationBottle').src = config.notificationBottle;
+      const colour = config.background.startsWith('#');
+      $('stage').style.backgroundImage = colour ? 'none' : `url(${JSON.stringify(config.background)})`;
+      $('stage').style.backgroundColor = colour ? config.background : '';
+      $('cycleValue').textContent = `${config.cycleSeconds} s`;
+      $('scrubber').max = config.cycleSeconds;
+      const edge = percent => `rgb(0 0 0 / ${percent}%)`;
+      const mask = `linear-gradient(to right, ${edge(config.edgeStart)} 0%, #000 ${config.fadeStart}%, #000 ${100 - config.fadeEnd}%, ${edge(config.edgeEnd)} 100%)`;
+      const marquee = document.querySelector('.marquee');
+      marquee.style.maskImage = mask;
+      marquee.style.webkitMaskImage = mask;
+      const glass = document.querySelector('.glass');
+      glass.style.background = `rgb(255 255 255 / ${config.glassOpacity}%)`;
+      glass.style.borderRadius = `${config.glassRadius}px`;
+      glass.style.inset = `${config.outerPadding}px`;
+      glass.style.padding = `${config.innerPadding}px`;
+      // Container only export: slide and scale the stage so the container exactly fills a 960px wide frame.
+      if (captureMode === 'container') {
+        const zoom = 960 / (STAGE_WIDTH - 2 * config.outerPadding);
+        $('stage').style.transform = `translate(${-config.outerPadding * zoom}px, ${-config.outerPadding * zoom}px) scale(${zoom})`;
+      }
+      fitContent();
+      for (const [id, key] of Object.entries(RANGES)) $(id).value = config[key];
+      if ($('titleInput').value !== config.title) $('titleInput').value = config.title;
+      if ($('messageInput').value !== config.message) $('messageInput').value = config.message;
+      $('animateToastInput').checked = config.animateToast;
+      $('showToastInput').checked = config.showToast;
+      selectImage(bottleSelect, config.notificationBottle);
+      selectImage(backgroundSelect, config.background);
+      $('radiusValue').textContent = `${config.glassRadius} px`;
+      // Spacing scales with the bottles so the rhythm holds at any size.
+      $('stage').style.setProperty('--b', config.bottleSize / 100);
+      const gap = config.bottleSpacing * scale * config.bottleSize / 100;
+      for (const set of track.children) { set.style.gap = `${gap}px`; set.style.paddingRight = `${gap}px`; }
+      $('bottleSizeValue').textContent = `${config.bottleSize}%`;
+      $('outerValue').textContent = `${config.outerPadding} px`;
+      $('innerValue').textContent = `${config.innerPadding} px`;
+      $('gapValue').textContent = `${config.rowGap} px`;
+      $('marqueeValue').textContent = `${config.marqueeSeconds} s`;
+      $('spacingValue').textContent = `${config.bottleSpacing} px`;
+      $('fadeStartValue').textContent = `${config.fadeStart}%`;
+      $('edgeStartValue').textContent = `${config.edgeStart}%`;
+      $('fadeEndValue').textContent = `${config.fadeEnd}%`;
+      $('edgeEndValue').textContent = `${config.edgeEnd}%`;
+      $('glassValue').textContent = `${config.glassOpacity}%`;
+      // The video only loops cleanly when the loop holds a whole number of marquee passes.
+      const passes = config.cycleSeconds / config.marqueeSeconds;
+      const seamless = Math.abs(passes - Math.round(passes)) < 1e-6;
+      const fits = [Math.floor(passes), Math.ceil(passes)].filter(n => n > 0).map(n => `${+(config.cycleSeconds / n).toFixed(2)} s`);
+      $('marqueeNote').textContent = seamless ? 'Loops seamlessly.' : `Bottles jump at the loop point. For a clean loop use ${[...new Set(fits)].join(' or ')}.`;
+      $('marqueeNote').classList.toggle('warn', !seamless);
+    }
+    window.setPrototypeConfig = setConfig;
+    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+    const smooth = n => { n = clamp(n, 0, 1); return n * n * (3 - 2 * n); };
+    function renderFrame(seconds) {
+      const cycle = config.cycleSeconds;
+      const time = ((seconds % cycle) + cycle) % cycle;
+      const setWidth = BOTTLES.length * (BOTTLE_WIDTH + config.bottleSpacing) * scale * config.bottleSize / 100;
+      // At time 0 the first bottle starts where the left edge fade ends, so the opening frame is all full bottles.
+      const marqueeWidth = STAGE_WIDTH - 2 * (config.outerPadding + config.innerPadding) - 40 * scale;
+      const offset = marqueeWidth * config.fadeStart / 100;
+      const pass = (time / config.marqueeSeconds) % 1;
+      track.style.transform = `translate3d(${-((((setWidth * pass - offset) % setWidth) + setWidth) % setWidth)}px,0,0)`;
+      const enter = config.animateToast ? smooth((time - .35) / .65) : 1;
+      const leave = config.animateToast ? 1 - smooth((time - (cycle - .7)) / .55) : 1;
+      const visibility = enter * leave;
+      const toast = $('notification');
+      toast.style.opacity = visibility;
+      toast.style.transform = `translate3d(0,${((1 - enter) * 18 + (1 - leave) * -10) * scale}px,0)`;
+      if (!capture) {
+        $('scrubber').value = time;
+        $('timecode').textContent = `${time.toFixed(1)} / ${cycle.toFixed(1)} s`;
+      }
+    }
+    window.renderFrame = renderFrame;
+    let playing = true;
+    let elapsed = 0;
+    let last = performance.now();
+    function tick(now) {
+      if (playing) elapsed += (now - last) / 1000;
+      last = now;
+      if (!capture) renderFrame(elapsed);
+      requestAnimationFrame(tick);
+    }
+    if (!capture) {
+      const viewport = $('stageViewport');
+      const resize = () => { $('stage').style.transform = `scale(${viewport.clientWidth / 1000})`; };
+      new ResizeObserver(resize).observe(viewport);
+      resize();
+      $('playButton').onclick = () => { playing = !playing; $('playButton').textContent = playing ? 'Pause' : 'Play'; };
+      $('restartButton').onclick = () => { elapsed = 0; renderFrame(0); };
+      $('scrubber').oninput = e => { elapsed = Number(e.target.value); renderFrame(elapsed); };
+      // Any hand edit moves the variant picker to "Custom", so picking a saved variant again restores it.
+      const edit = next => { setConfig(next); variantSelect.value = ''; };
+      for (const [id, key] of Object.entries(RANGES)) $(id).oninput = e => { edit({ [key]: Number(e.target.value) }); if (key === 'cycleSeconds') elapsed = 0; };
+      $('animateToastInput').onchange = e => edit({ animateToast: e.target.checked });
+      $('showToastInput').onchange = e => edit({ showToast: e.target.checked });
+      $('titleInput').oninput = e => edit({ title: e.target.value });
+      $('messageInput').oninput = e => edit({ message: e.target.value });
+      bottleSelect.onchange = e => edit({ notificationBottle: e.target.value });
+      backgroundSelect.onchange = e => edit({ background: e.target.value });
+      const readFile = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+      const upload = key => async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const url = await readFile(file);
+        uploads.set(url, file.name);
+        edit({ [key]: url });
+      };
+      $('bottleFile').onchange = upload('notificationBottle');
+      $('backgroundFile').onchange = upload('background');
+      variantSelect.onchange = e => { if (VARIANTS[e.target.value]) { setConfig({ ...DEFAULTS, ...VARIANTS[e.target.value] }); elapsed = 0; } };
+      // Uploaded images are far too large to copy as text, so they travel as a file name and are skipped on paste.
+      const flash = text => { $('status').textContent = text; };
+      $('copySettings').onclick = async () => {
+        const settings = Object.fromEntries(Object.entries(config).map(([key, value]) => [key, typeof value === 'string' && value.startsWith('data:') ? `uploaded:${uploads.get(value) || 'image'}` : value]));
+        const text = JSON.stringify(settings, null, 2);
+        try { await navigator.clipboard.writeText(text); flash('Settings copied.'); } catch { prompt('Copy these settings:', text); }
+      };
+      $('pasteSettings').onclick = async () => {
+        let text;
+        try { text = await navigator.clipboard.readText(); } catch { text = prompt('Paste settings:'); }
+        if (!text) return;
+        try {
+          const pasted = JSON.parse(text);
+          const next = {};
+          for (const [key, fallback] of Object.entries(DEFAULTS)) {
+            const value = pasted[key];
+            if (typeof value === typeof fallback && !(typeof value === 'string' && value.startsWith('uploaded:'))) next[key] = value;
+          }
+          if (!Object.keys(next).length) throw new Error('nothing to apply');
+          edit(next);
+          elapsed = 0;
+          flash('Settings applied.');
+        } catch { flash('The clipboard does not hold copied settings.'); }
+      };
+      $('transparentInput').onchange = e => {
+        $('stage').classList.toggle('no-backdrop', e.target.checked);
+        $('transparentNote').hidden = !e.target.checked;
+        $('exportButton').textContent = e.target.checked ? 'Download WebM + MOV' : 'Download MP4';
+      };
+      $('exportButton').onclick = async () => {
+        const button = $('exportButton');
+        button.disabled = true;
+        const transparent = $('transparentInput').checked;
+        $('status').textContent = 'Rendering frames and encoding…';
+        const progressTimer = setInterval(async () => {
+          try {
+            const { frame, total } = await (await fetch('/progress')).json();
+            if (total) $('status').textContent = `Rendering frame ${frame} of ${total}…`;
+          } catch { /* The export request reports connection errors. */ }
+        }, 800);
+        try {
+          const response = await fetch('/export', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ config, width: Number($('qualitySelect').value), area: $('areaSelect').value, transparent }) });
+          if (!response.ok) throw new Error(await response.text());
+          const url = URL.createObjectURL(await response.blob());
+          const link = document.createElement('a');
+          link.href = url;
+          const quality = { 1920: '1080p', 2560: '1440p', 3840: '4k' }[$('qualitySelect').value];
+          link.download = `sip-motion-${quality}${$('areaSelect').value === 'container' ? '-container' : ''}${transparent ? '-transparent.zip' : '.mp4'}`;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          $('status').textContent = transparent ? 'Zip downloaded.' : 'MP4 downloaded.';
+        } catch (error) { $('status').textContent = `Export failed: ${error.message}`; }
+        clearInterval(progressTimer);
+        button.disabled = false;
+      };
+    }
+    setConfig(config);
+    renderFrame(0);
+    requestAnimationFrame(tick);
+    window.prototypeReady = Promise.all([document.fonts.ready, ...[...document.images].map(img => img.decode().catch(() => {}))]).then(() => setConfig({}));
+  </script>
+</body>
+</html>
