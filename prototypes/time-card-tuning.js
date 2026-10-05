@@ -1,6 +1,8 @@
 window.createTimeCardTuning = function createTimeCardTuning(onChange) {
   const {createDialKit,createDialRoot} = window.TimeCardTuningLibraries;
-  // User-tuned defaults shared by WebKit and Chromium previews.
+  // Defaults match the motion in the portfolio recording (drink-time-card.mp4):
+  // digits travel 40px in 190ms and stepped digits leave downward. Production
+  // ships 20px / 350ms (packages/ui/src/time-card/timing.ts).
   const kit = createDialKit('Time card · 07', {
     previewMode:false,
     previewOpenKey:{type:'text',label:'Open key',default:'o'},
@@ -12,14 +14,14 @@ window.createTimeCardTuning = function createTimeCardTuning(onChange) {
       customBezier:{type:'text',default:'0.22, 1, 0.36, 1',placeholder:'x1, y1, x2, y2 (used with Custom)'}
     },
     buttons:{
-      pressScale:[.94,.8,1.1,.01],digitDurationMs:[350,80,1000,10],
-      exitDownward:false,
+      pressScale:[.94,.8,1.1,.01],digitDurationMs:[190,80,1000,10],
+      exitDownward:true,
       easingPreset:window.TimeCardEasing.control(),
       customBezier:{type:'text',default:'0.22, 1, 0.36, 1',placeholder:'x1, y1, x2, y2 (used with Custom)'}
     },
-    input:{enterDistancePx:[20,0,96,1],travelTimeMs:[350,80,600,10],exitDistancePx:[20,0,96,1],linkExitToEntry:true,deleteDownward:true},
+    input:{enterDistancePx:[40,0,96,1],travelTimeMs:[190,80,600,10],exitDistancePx:[40,0,96,1],linkExitToEntry:true,deleteDownward:true},
     layout:{buttonGapPx:[4,0,16,1]}
-  }, {id:'sip-time-card-07',persist:true});
+  }, {id:'sip-time-card-07-recording',persist:true});
   const root = createDialRoot({position:'top-left',theme:document.documentElement.dataset.theme});
   root.element.classList.add('time-card-dials');
   const shell = root.element.querySelector('.dialkit-panel');
